@@ -13,7 +13,7 @@ import java.util.Arrays;
 
 
 /* class EvolvingMetacommunity
- * loops over cycles (time steps) of reproduction and dispersal
+ * loops over cycles (time steps) of repType and dispersal
  * writes output to file */
 public class EvolvingFoodweb {
 
@@ -37,34 +37,32 @@ public class EvolvingFoodweb {
             logTitles(streamOut);
 
             for (int r = 0; r < run.runs; r++)
-                for (int dc = 0; dc < comm.demogrCost.length; dc++)
                     for (int es = 0; es < comm.envStep.length; es++)
                         for (int dr = 0; dr < comm.dispRate.length; dr++) {
 
-                            System.out.format("run = %d; dims = %d; traits = %d; demCorr = %.2f; disp = %.4f; step = %.4f%n",
-                                    (r + 1), comm.envDims, comm.traits, comm.demogrCost[dc], comm.dispRate[dr], comm.envStep[es]);
+                            System.out.format("run = %d; dims = %d; traits = %d; disp = %.4f; step = %.4f%n",
+                                    (r + 1), comm.envDims, comm.traits, comm.dispRate[dr], comm.envStep[es]);
 
                             comm.init();
                             evol.init(comm);
-                            Auxils.init(comm, evol);
+                            Auxils.init(evol);
                             Init init = new Init(comm);
 
-                            sites = new Sites(comm, evol, init, dc, es, dr);
+                            sites = new Sites(comm, evol, init, es, dr);
 
-                            System.out.format("  time = %d; metacommunity N = %d; absFit = %f; relFit = %f; pSex = %f%n", 0, sites.metaPopSize(), sites.absFitnessMean(), sites.relFitnessMean(), sites.pSex());
-                            logResults(0, streamOut, r, dc, es, dr);
+                            System.out.format("  time = %d; metacommunity N = %d; fit = %f%n", 0, sites.metaPopSize(), sites.fitnessMean());
+                            logResults(0, streamOut, r, es, dr);
 
                             for (int t = 0; t < run.timeSteps; t++) {
                                 sites.changeEnvironment();
-                                sites.findMaxFitness();
                                 sites.contributionAdults();
                                 sites.reproduction();
 
                                 if (t == 0 || ((t + 1) % run.printSteps) == 0) {
-                                    System.out.format("  time = %d; metacommunity N = %d; absFit = %f; relFit = %f; pSex = %f%n", (t + 1), sites.metaPopSize(), sites.absFitnessMean(), sites.relFitnessMean(), sites.pSex());
+                                    System.out.format("  time = %d; metacommunity N = %d; fit = %f%n", (t + 1), sites.metaPopSize(), sites.fitnessMean());
                                 }
                                 if (t == 0 || ((t + 1) % run.saveSteps) == 0) {
-                                    logResults(t+1, streamOut, r, dc, es, dr);
+                                    logResults(t+1, streamOut, r, es, dr);
                                 }
                             }
                         }
@@ -76,8 +74,8 @@ public class EvolvingFoodweb {
     }
 
     static void logTitles(PrintWriter out) {
-        out.print("gridsize;patches;p_e_change;e_step;m;rho;dims;sigma_e;microsites;d;demogr_cost;traits;traitLoci;sigma_z;mu;omega_e;"
-                + "run;time;patch;N;trait_fitness_mean;trait_fitness_var;fitness_mean;fitness_var;fitness_geom;load_mean;load_var;S_mean;S_var;pSex_mean;pSex_var");
+        out.print("gridsize;patches;p_e_change;e_step;m;rho;dims;sigma_e;microsites;d;b;traits;traitLoci;sigma_z;mu;omega_e;"
+                + "run;time;patch;N;fitness_mean;fitness_var;fitness_geom;load_mean;load_var;S_mean;S_var");
         for (int tr = 0; tr < comm.traits; tr++)
             out.format(";dim_tr%d;e_dim_tr%d;genotype_mean_tr%d;genotype_var_tr%d;phenotype_mean_tr%d;phenotype_var_tr%d;fitness_mean_tr%d;fitness_var_tr%d;"
                             + "genotype_meta_var_tr%d;phenotype_meta_var_tr%d",
@@ -85,14 +83,14 @@ public class EvolvingFoodweb {
         out.println("");
     }
 
-    static void logResults(int t, PrintWriter out, int r, int dc, int es, int dr) {
+    static void logResults(int t, PrintWriter out, int r, int es, int dr) {
         for (int p = 0; p < comm.nbrPatches; p++) {
             out.format("%d;%d;%f;%f;%f;%f;%d;%f;%d;%f;%f;%d;%d;%f;%f;%f",
-                    comm.gridSize, comm.nbrPatches, comm.pChange, comm.envStep[es], comm.dispRate[dr], comm.rho, comm.envDims, comm.sigmaE, comm.microsites, comm.d, comm.demogrCost[dc], comm.traits, evol.traitLoci, evol.sigmaZ, evol.mutationRate, evol.omegaE);
+                    comm.gridSize, comm.nbrPatches, comm.pChange, comm.envStep[es], comm.dispRate[dr], comm.rho, comm.envDims, comm.sigmaE, comm.microsites, comm.d, comm.b, comm.traits, evol.traitLoci, evol.sigmaZ, evol.mutationRate, evol.omegaE);
             out.format(";%d;%d;%d",
                     r + 1, t, p + 1);
-            out.format(";%d;%f;%f;%f;%f;%f;%f;%f;%f;%f;%f;%f",
-                    sites.popSize(), sites.traitFitnessMean(p), sites.traitFitnessVar(p), sites.relFitnessMean(p), sites.relFitnessVar(p), sites.relFitnessGeom(p), sites.relLoadMean(p), sites.relLoadVar(p), sites.selectionDiff(p), sites.selectionDiffVar(p), sites.pSex(p), sites.pSexVar(p));
+            out.format(";%d;%f;%f;%f;%f;%f;%f;%f",
+                    sites.popSize(p), sites.fitnessMean(p), sites.fitnessVar(p), sites.fitnessGeom(p), sites.loadMean(p), sites.loadVar(p), sites.selectionDiff(p), sites.selectionDiffVar(p));
             for (int tr = 0; tr < comm.traits; tr++)
                 out.format(";%d;%f;%f;%f;%f;%f;%f;%f;%f;%f",
                         sites.comm.traitDim[tr] + 1, sites.environment[p][sites.comm.traitDim[tr]], sites.genotypeMean(p, tr), sites.genotypeVar(p, tr), sites.phenotypeMean(p, tr), sites.phenotypeVar(p, tr), sites.traitFitnessMean(p, tr), sites.traitFitnessVar(p, tr),
@@ -107,39 +105,35 @@ public class EvolvingFoodweb {
 
 /* class Sites
  * keeps track of individuals and their attributes in microsites (microhabitats within patches)
- * implements reproduction (with inheritance and mutation) and dispersal */
+ * implements repType (with inheritance and mutation) and dispersal */
 class Sites {
     Comm comm;
     Evol evol;
     int totSites;
 
-    int dcPos;
     int esPos;
     int drPos;
 
     int[] patch;
+    boolean[] alive;
     double[][] traitPhenotype;
     double[][] traitFitness;
     double[] fitness;
-    double[] pSex;
 
     byte[][] genotype;
-    byte[][][] newborns;
 
     double[][] environment;
-    double[] maxFitness;
 
-    boolean[] sexAdults;
-    int[] endPosFathers;
-    int[][] fathersPos;
-    double[][] fathersProb;
-    double[][] fathersCumProb;
+    double[] nbrNewborns;
+    int[] nbrEmpty;
+
+    int[][] emptyPos;
     double[][] mothersCumProb;
+    double[][] fathersCumProb;
 
-    public Sites(Comm cmm, Evol evl, Init init, int dc, int es, int dr) {
+    public Sites(Comm cmm, Evol evl, Init init, int es, int dr) {
         comm = cmm;
         evol = evl;
-        dcPos = dc;
         esPos = es;
         drPos = dr;
 
@@ -148,26 +142,23 @@ class Sites {
         totSites = comm.nbrPatches * comm.microsites;
 
         patch = new int[totSites];
+        alive = new boolean[totSites];
         traitPhenotype = new double[totSites][comm.traits];
         traitFitness = new double[totSites][comm.traits];
         fitness = new double[totSites];
         genotype = new byte[totSites][2 * evol.allLoci];
-        pSex = new double[totSites];
-
-        newborns = new byte[comm.nbrPatches][comm.nbrNewborns][2 * evol.allLoci];
 
         environment = new double[comm.nbrPatches][comm.envDims];
-        maxFitness = new double[comm.nbrPatches];
 
-        sexAdults = new boolean[totSites];
-        endPosFathers = new int[comm.nbrPatches];
-        fathersPos = new int[comm.nbrPatches][comm.microsites];
-        fathersProb = new double[comm.nbrPatches][comm.microsites];
-        fathersCumProb = new double[comm.nbrPatches][];
+        nbrNewborns = new double[comm.nbrPatches];
+        nbrEmpty = new int[comm.nbrPatches];
+
+        emptyPos = new int[comm.nbrPatches][comm.microsites];
         mothersCumProb = new double[comm.nbrPatches][totSites];
+        fathersCumProb = new double[comm.nbrPatches][comm.microsites];
 
         double indGtp;
-        Arrays.fill(maxFitness, 0);
+        Arrays.fill(alive, false);
 
         for (int p = 0; p < comm.nbrPatches; p++) {
             if (comm.envDims >= 0) System.arraycopy(init.environment[p], 0, environment[p], 0, comm.envDims);
@@ -175,6 +166,7 @@ class Sites {
                 patch[m] = p;
             int[] posInds = Auxils.arraySample(init.N[p], Auxils.enumArray(p * comm.microsites, ((p + 1) * comm.microsites) - 1));
             for (int m : posInds) {
+                alive[m] = true;
                 fitness[m] = 1;
                 for (int tr = 0; tr < comm.traits; tr++) {
                     traitFitness[m][tr] = 1;
@@ -182,17 +174,10 @@ class Sites {
                     for (int l : evol.traitGenes[tr]) {
                         genotype[m][l] = (byte) Math.round(Auxils.random.nextDouble() * 0.5 * (Auxils.random.nextBoolean() ? -1 : 1) + indGtp);
                     }
-                    for (int l : evol.sexGenes) {
-                        genotype[m][l] = (byte) Math.round(Auxils.random.nextDouble() * 0.5 * (Auxils.random.nextBoolean() ? -1 : 1) + init.pSex);
-                    }
                     traitPhenotype[m][tr] = calcPhenotype(m, tr);
                     traitFitness[m][tr] = calcFitness(traitPhenotype[m][tr], environment[p][comm.traitDim[tr]]);
                     fitness[m] *= traitFitness[m][tr];
                 }
-                if (maxFitness[p] < fitness[m])
-                    maxFitness[p] = fitness[m];
-
-                pSex[m] = Math.min(1, Math.max(0, Auxils.arrayMean(Auxils.arrayElements(genotype[m], evol.sexGenes))));
             }
         }
     }
@@ -243,139 +228,143 @@ class Sites {
         }
     }
 
-    void findMaxFitness() {
-        Arrays.fill(maxFitness, 0.);
-        for (int i = 0; i < totSites; i++)
-            if (maxFitness[patch[i]] < fitness[i])
-                maxFitness[patch[i]] = fitness[i];
-    }
-
     void contributionAdults() {
-        Arrays.fill(endPosFathers, 0);
         double contr;
-        int p;
+        int p, m;
+
+        Arrays.fill(nbrEmpty, 0);
 
         for (int i = 0; i < totSites; i++) {
             p = patch[i];
-            contr = (maxFitness[p] > 0.) ? fitness[i] / maxFitness[p] : 0.;
-            sexAdults[i] = Auxils.random.nextDouble() <= pSex[i];
-            if (sexAdults[i]) {
-                fathersPos[p][endPosFathers[p]] = i;
-                fathersProb[p][endPosFathers[p]++] = contr;
-                contr *= comm.demogrCost[dcPos];
+            m = i%comm.microsites;
+            if(alive[i])
+                alive[i] = Auxils.random.nextDouble() <= (1 - comm.d);
+//            alive[i] = alive[i] ? (Auxils.random.nextDouble() <= ((1 - comm.d)*fitness[i])) : alive[i];
+            if (!alive[i]) {
+//                nbrEmpty[p]++;
+                emptyPos[p][nbrEmpty[p]++] = i;
+            }
+//            emptyPos[p][m] = alive[i] ? 0 : 1;
+//            if (m > 0)
+//                emptyPos[p][m] += emptyPos[p][m-1];
+            contr = alive[i] ? comm.b : 0;
+            contr *= fitness[i];
+            if (comm.repType.equals("SEXUAL")) {
+                fathersCumProb[p][m] = contr;
+                if (m > 0)
+                fathersCumProb[p][m] += fathersCumProb[p][m-1];
             }
             for (int p2 = 0; p2 < comm.nbrPatches; p2++) {
                 mothersCumProb[p2][i] = contr * comm.dispNeighbours[p2][p];
                 if (i > 0)
-                    mothersCumProb[p2][i] += mothersCumProb[p2][i - 1];
+                    mothersCumProb[p2][i] += mothersCumProb[p2][i-1];
             }
         }
         for (p = 0; p < comm.nbrPatches; p++) {
+            nbrNewborns[p] = mothersCumProb[p][totSites-1];
+//            nbrEmpty[p] = (int) emptyPos[p][comm.microsites-1];
             Auxils.arrayDiv(mothersCumProb[p], mothersCumProb[p][totSites-1]);
-            if (endPosFathers[p] > 0) {
-                fathersCumProb[p] = Arrays.copyOf(fathersProb[p], endPosFathers[p]);
-                Auxils.arrayCumSum(fathersCumProb[p]);
-                Auxils.arrayDiv(fathersCumProb[p], fathersCumProb[p][endPosFathers[p] - 1]);
-            }
+//            Auxils.arrayDiv(emptyPos[p], emptyPos[p][comm.microsites-1]);
+            if (comm.repType.equals("SEXUAL"))
+                Auxils.arrayDiv(fathersCumProb[p], fathersCumProb[p][comm.microsites-1]);
         }
     }
 
     void reproduction() {
+        int o, m, f, newborns, nbrSettled, patchMother;
         int[] posOffspring;
-        int m, f, patchMother;
         for (int p = 0; p < comm.nbrPatches; p++) {
+            newborns = (nbrNewborns[p] < 1) ? ((Auxils.random.nextDouble() <= nbrNewborns[p]) ? 1 : 0) : (int) nbrNewborns[p];
+            nbrSettled = Math.min(newborns, nbrEmpty[p]);
+            posOffspring = Auxils.arraySample(nbrSettled, Arrays.copyOf(emptyPos[p], nbrEmpty[p]));
+
+//debug
+//            System.out.println(" patch " + p);
+//            System.out.println("   nbrNewborns " + nbrNewborns[p]);
+//            System.out.println("   nbrEmpty " + nbrEmpty[p]);
+//            System.out.println("   newborns " + newborns);
+//            System.out.println("   settled " + nbrSettled);
+
             //sampling parents with replacement!
             //selfing allowed!
-            for (int i = 0; i < comm.nbrNewborns; i++) {
+            for (int i = 0; i < nbrSettled; i++) {
+                o = posOffspring[i];
                 m = Auxils.randIntCumProb(mothersCumProb[p]);
                 patchMother = patch[m];
-                if (sexAdults[m]) {
-                    f = fathersPos[patchMother][Auxils.randIntCumProb(fathersCumProb[patchMother])];
-                    inherit(p, i, m, f);
-                } else
-                    inherit(p, i, m);
-                mutate(p, i);
-            }
-        }
-        for (int p = 0; p < comm.nbrPatches; p++) {
-            posOffspring = Auxils.combinationSamplerPositionOffspring.sample();
-            Auxils.arrayAdd(posOffspring, p * comm.microsites);
-            settle(p, posOffspring);
-        }
-    }
 
-    /* install newborns and inherit traits from the parent(s)
-     * including mutation */
-    void settle(int p, int[] posOffspring) {
-        for (int i = 0; i < comm.nbrNewborns; i++) {
-            System.arraycopy(newborns[p][i], 0, genotype[posOffspring[i]], 0, 2 * evol.allLoci);
-            fitness[posOffspring[i]] = 1;
-            for (int tr = 0; tr < comm.traits; tr++) {
-                traitPhenotype[posOffspring[i]][tr] = calcPhenotype(posOffspring[i], tr);
-                traitFitness[posOffspring[i]][tr] = calcFitness(traitPhenotype[posOffspring[i]][tr], environment[p][comm.traitDim[tr]]);
-                fitness[posOffspring[i]] *= traitFitness[posOffspring[i]][tr];
+//debug
+//                System.out.println("     offspr " + i);
+//                System.out.println("       pos o " + o);
+//                System.out.println("       alive o " + alive[o]);
+//                System.out.println("       pos m " + m);
+//                System.out.println("       alive m " + alive[m]);
+
+
+                if (comm.repType.equals("SEXUAL")) {
+                    f = patchMother*comm.microsites + Auxils.randIntCumProb(fathersCumProb[patchMother]);
+                    inherit(o, m, f);
+                } else
+                    inherit(o, m);
+                mutate(o);
+                alive[o] = true;
+                fitness[o] = 1;
+                for (int tr = 0; tr < comm.traits; tr++) {
+                    traitPhenotype[o][tr] = calcPhenotype(o, tr);
+                    traitFitness[o][tr] = calcFitness(traitPhenotype[o][tr], environment[p][comm.traitDim[tr]]);
+                    fitness[o] *= traitFitness[o][tr];
+                }
             }
-            if (maxFitness[p] < fitness[posOffspring[i]])
-                maxFitness[p] = fitness[posOffspring[i]];
-            pSex[posOffspring[i]] = Math.min(1, Math.max(0, Auxils.arrayMean(Auxils.arrayElements(genotype[posOffspring[i]], evol.sexGenes))));
         }
     }
 
     /* inheritance for asexual reproduction (one parent) */
-    void inherit(int p, int posOffspring, int posParent) {
-        System.arraycopy(genotype[posParent], 0, newborns[p][posOffspring], 0, 2 * evol.allLoci);
+    void inherit(int posOffspring, int posParent) {
+        System.arraycopy(genotype[posParent], 0, genotype[posOffspring], 0, 2 * evol.allLoci);
     }
 
     /* inheritance for sexual reproduction (two parent) */
-    void inherit(int p, int posOffspring, int posMother, int posFather) {
+    void inherit(int posOffspring, int posMother, int posFather) {
         for (int l = 0; l < evol.allLoci; l++) {
-            newborns[p][posOffspring][evol.allMother[l]] = genotype[posMother][Auxils.random.nextBoolean() ? evol.allMother[l] : evol.allFather[l]];
-            newborns[p][posOffspring][evol.allFather[l]] = genotype[posFather][Auxils.random.nextBoolean() ? evol.allMother[l] : evol.allFather[l]];
+            genotype[posOffspring][evol.allMother[l]] = genotype[posMother][Auxils.random.nextBoolean() ? evol.allMother[l] : evol.allFather[l]];
+            genotype[posOffspring][evol.allFather[l]] = genotype[posFather][Auxils.random.nextBoolean() ? evol.allMother[l] : evol.allFather[l]];
         }
     }
 
-    void mutate(int p, int posOffspring) {
+    void mutate(int posOffspring) {
         int k;
-        int[] somMutLocs, sexMutLocs;
-        double pSexTemp;
+        int[] somMutLocs;
 
         k = Auxils.binomialSamplerSomatic.sample();
         if (k > 0) {
             CombinationSampler combinationSampler = new CombinationSampler(Auxils.random,evol.traitLoci*2, k);
-            somMutLocs = Auxils.arrayElements(evol.somGenes, combinationSampler.sample());
+            somMutLocs = Auxils.arrayElements(evol.allGenes, combinationSampler.sample());
             for (int l : somMutLocs) {
-                newborns[p][posOffspring][l] += (Auxils.random.nextBoolean() ? -1 : 1);
-            }
-        }
-
-        k = Auxils.binomialSamplerSex.sample();
-        if (k > 0) {
-            pSexTemp = Auxils.arrayMean(Auxils.arrayElements(newborns[p][posOffspring], evol.sexGenes));
-            CombinationSampler combinationSampler = new CombinationSampler(Auxils.random,evol.sexLoci*2, k);
-            sexMutLocs = Auxils.arrayElements(evol.sexGenes, combinationSampler.sample());
-            for (int l : sexMutLocs) {
-                if (pSexTemp <= 0.)
-                    newborns[p][posOffspring][l] += 1;
-                else if (pSexTemp >= 1.)
-                    newborns[p][posOffspring][l] -= 1;
-                else
-                    newborns[p][posOffspring][l] += (Auxils.random.nextBoolean() ? -1 : 1);
+                genotype[posOffspring][l] += (Auxils.random.nextBoolean() ? -1 : 1);
             }
         }
     }
 
     int metaPopSize() {
-        return totSites;
+        int N = 0;
+        for (int i = 0; i < totSites; i++)
+            if (alive[i])
+                N++;
+        return N;
     }
 
-    int popSize() {
-        return comm.microsites;
+    int popSize(int p) {
+        int N = 0;
+        for (int i = p*comm.microsites; i < ((p + 1) * comm.microsites); i++)
+            if (alive[i])
+                N++;
+        return N;
     }
 
     double genotypeMean(int t) {
         double mean = 0;
         for (int i = 0; i < totSites; i++)
-            mean += Auxils.arrayMean(Auxils.arrayElements(genotype[i], evol.traitGenes[t]));
+            if (alive[i])
+                mean += Auxils.arrayMean(Auxils.arrayElements(genotype[i], evol.traitGenes[t]));
         mean /= metaPopSize();
         return mean;
     }
@@ -383,8 +372,9 @@ class Sites {
     double genotypeMean(int p, int t) {
         double mean = 0;
         for (int i = p * comm.microsites; i < (p + 1) * comm.microsites; i++)
-            mean += Auxils.arrayMean(Auxils.arrayElements(genotype[i], evol.traitGenes[t]));
-        mean /= popSize();
+            if (alive[i])
+                mean += Auxils.arrayMean(Auxils.arrayElements(genotype[i], evol.traitGenes[t]));
+        mean /= popSize(p);
         return mean;
     }
 
@@ -392,7 +382,8 @@ class Sites {
         double mean = genotypeMean(t);
         double var = 0;
         for (int i = 0; i < totSites; i++)
-            var += Math.pow(mean - Auxils.arrayMean(Auxils.arrayElements(genotype[i], evol.traitGenes[t])), 2);
+            if (alive[i])
+                var += Math.pow(mean - Auxils.arrayMean(Auxils.arrayElements(genotype[i], evol.traitGenes[t])), 2);
         var /= metaPopSize();
         return var;
     }
@@ -401,15 +392,17 @@ class Sites {
         double mean = genotypeMean(p, t);
         double var = 0;
         for (int i = p * comm.microsites; i < (p + 1) * comm.microsites; i++)
-            var += Math.pow(mean - Auxils.arrayMean(Auxils.arrayElements(genotype[i], evol.traitGenes[t])), 2);
-        var /= popSize();
+            if (alive[i])
+                var += Math.pow(mean - Auxils.arrayMean(Auxils.arrayElements(genotype[i], evol.traitGenes[t])), 2);
+        var /= popSize(p);
         return var;
     }
 
     double phenotypeMean(int t) {
         double mean = 0;
         for (int i = 0; i < totSites; i++)
-            mean += traitPhenotype[i][t];
+            if (alive[i])
+                mean += traitPhenotype[i][t];
         mean /= metaPopSize();
         return mean;
     }
@@ -417,8 +410,9 @@ class Sites {
     double phenotypeMean(int p, int t) {
         double mean = 0;
         for (int i = p * comm.microsites; i < (p + 1) * comm.microsites; i++)
-            mean += traitPhenotype[i][t];
-        mean /= popSize();
+            if (alive[i])
+                mean += traitPhenotype[i][t];
+        mean /= popSize(p);
         return mean;
     }
 
@@ -426,7 +420,8 @@ class Sites {
         double mean = phenotypeMean(t);
         double var = 0;
         for (int i = 0; i < totSites; i++)
-            var += Math.pow(mean - traitPhenotype[i][t], 2);
+            if (alive[i])
+                var += Math.pow(mean - traitPhenotype[i][t], 2);
         var /= metaPopSize();
         return var;
     }
@@ -435,159 +430,127 @@ class Sites {
         double mean = phenotypeMean(p, t);
         double var = 0;
         for (int i = p * comm.microsites; i < (p + 1) * comm.microsites; i++)
-            var += Math.pow(mean - traitPhenotype[i][t], 2);
-        var /= popSize();
+            if (alive[i])
+                var += Math.pow(mean - traitPhenotype[i][t], 2);
+        var /= popSize(p);
         return var;
-    }
-
-    double traitFitnessMax(int p, int t) {
-        double max = 0;
-        for (int i = p * comm.microsites; i < (p + 1) * comm.microsites; i++)
-            if (max < traitFitness[i][t])
-                max = traitFitness[i][t];
-        return max;
     }
 
     double traitFitnessMean(int p, int t) {
         double mean = 0;
-        double max = traitFitnessMax(p, t);
         for (int i = p * comm.microsites; i < (p + 1) * comm.microsites; i++)
-            mean += traitFitness[i][t] / max;
-        mean /= popSize();
+            if (alive[i])
+                mean += traitFitness[i][t];
+        mean /= popSize(p);
         return mean;
     }
 
     double traitFitnessVar(int p, int t) {
         double mean = traitFitnessMean(p, t);
-        double max = traitFitnessMax(p, t);
         double var = 0;
         for (int i = p * comm.microsites; i < (p + 1) * comm.microsites; i++)
-            var += Math.pow(mean - traitFitness[i][t] / max, 2);
-        var /= popSize();
+            if (alive[i])
+                var += Math.pow(mean - traitFitness[i][t], 2);
+        var /= popSize(p);
         return var;
     }
 
-    double traitFitnessMean(int p) {
-        double mean = 0;
-        for (int t = 0; t < comm.traits; t++)
-            mean += traitFitnessMean(p, t);
-        mean /= comm.traits;
-        return mean;
-    }
-
-    double traitFitnessVar(int p) {
-        double mean = traitFitnessMean(p);
-        double var = 0;
-        for (int t = 0; t < comm.traits; t++)
-            var += Math.pow(mean - traitFitnessMean(p, t), 2);
-        var /= popSize();
-        return var;
-    }
-
-    double absFitnessMean() {
+    double fitnessMean() {
         double mean = 0;
         for (int i = 0; i < totSites; i++)
-            mean += fitness[i];
+            if (alive[i])
+                mean += fitness[i];
         mean /= metaPopSize();
         return mean;
     }
 
-    double absFitnessMean(int p) {
+    double fitnessMean(int p) {
         double mean = 0;
         for (int i = p * comm.microsites; i < (p + 1) * comm.microsites; i++)
-            mean += fitness[i];
-        mean /= popSize();
+            if (alive[i])
+                mean += fitness[i];
+        mean /= popSize(p);
         return mean;
     }
 
-    double relFitnessMean() {
-        double mean = 0;
-        for (int i = 0; i < totSites; i++)
-            mean += (maxFitness[patch[i]] == 0) ? 0 : (fitness[i] / maxFitness[patch[i]]);
-        mean /= metaPopSize();
-        return mean;
-    }
-
-    double relFitnessMean(int p) {
+    double fitnessGeom(int p) {
         double mean = 0;
         for (int i = p * comm.microsites; i < (p + 1) * comm.microsites; i++)
-            mean += (maxFitness[p] == 0) ? 0 : (fitness[i] / maxFitness[p]);
-        mean /= popSize();
-        return mean;
-    }
-
-    double relFitnessGeom(int p) {
-        double mean = 0;
-        for (int i = p * comm.microsites; i < (p + 1) * comm.microsites; i++)
-            mean += Math.log((maxFitness[p] == 0) ? 0 : (fitness[i] / maxFitness[p]));
-        mean /= popSize();
+            if (alive[i])
+                mean += Math.log(fitness[i]);
+        mean /= popSize(p);
         return Math.exp(mean);
     }
 
-    double relFitnessVar(int p) {
-        double mean = relFitnessMean(p);
+    double fitnessVar(int p) {
+        double mean = fitnessMean(p);
         double var = 0;
         for (int i = p * comm.microsites; i < (p + 1) * comm.microsites; i++)
-            var += (maxFitness[p] == 0) ? 0 : Math.pow(mean - fitness[i] / maxFitness[p], 2);
-        var /= popSize();
+            if (alive[i])
+                var += Math.pow(mean - fitness[i], 2);
+        var /= popSize(p);
         return var;
     }
 
-    double relFitnessMin(int p) {
-        double relFit, min = 1;
+    double fitnessMin(int p) {
+        double min = 1;
         for (int i = p * comm.microsites; i < (p + 1) * comm.microsites; i++) {
-            relFit = (maxFitness[p] == 0) ? 0 : (fitness[i] / maxFitness[p]);
-            if (relFit < min)
-                min = relFit;
+            if (alive[i])
+                if (fitness[i] < min)
+                    min = fitness[i];
         }
         return min;
     }
 
-    double relFitnessMax(int p) {
-        double relFit, max = 0;
+    double fitnessMax(int p) {
+        double max = 0;
         for (int i = p * comm.microsites; i < (p + 1) * comm.microsites; i++) {
-            relFit = (maxFitness[p] == 0) ? 0 : (fitness[i] / maxFitness[p]);
-            if (relFit > max)
-                max = relFit;
+            if (alive[i])
+                if (fitness[i] > max)
+                    max = fitness[i];
         }
         return max;
     }
 
-    double relLoadMean(int p) {
+    double loadMean(int p) {
         double mean = 0;
         for (int i = p * comm.microsites; i < (p + 1) * comm.microsites; i++)
-            mean += (maxFitness[p] == 0) ? 0 : (1 - fitness[i] / maxFitness[p]);
-        mean /= popSize();
+            if (alive[i])
+                mean += 1 - fitness[i];
+        mean /= popSize(p);
         return mean;
     }
 
-    double relLoadVar(int p) {
-        double mean = relLoadMean(p);
+    double loadVar(int p) {
+        double mean = loadMean(p);
         double var = 0;
         for (int i = p * comm.microsites; i < (p + 1) * comm.microsites; i++)
-            var += (maxFitness[p] == 0) ? 0 : Math.pow(mean - (1 - fitness[i] / maxFitness[p]), 2);
-        var /= popSize();
+            if (alive[i])
+                var += Math.pow(mean - (1 - fitness[i]), 2);
+        var /= popSize(p);
         return var;
     }
 
     double selectionDiff(int p, int t) {
         double mean = 0;
         double sum = 0;
-        double fitRel;
-        double fitMean = relFitnessMean(p);
-        double phenotpSd = Math.sqrt(phenotypeVar(p, t));
+        double fit;
+        double fitMean = fitnessMean(p);
+        double phenotypeSd = Math.sqrt(phenotypeVar(p, t));
         double SDiff;
 
         for (int i = p * comm.microsites; i < (p + 1) * comm.microsites; i++) {
-            fitRel = ((maxFitness[p] == 0) ? 0 : (fitness[i] / maxFitness[p])) / fitMean;
-            mean += traitPhenotype[i][t] * fitRel;
-            sum += fitRel;
+            if (alive[i]) {
+                fit = fitness[i] / fitMean;
+                mean += traitPhenotype[i][t] * fit;
+                sum += fit;
+            }
         }
         mean /= sum;
-        if (phenotpSd == 0)
+        if (phenotypeSd == 0)
             SDiff = 0;
         else
-            SDiff = Math.abs((mean - phenotypeMean(p, t))) / phenotpSd;
+            SDiff = Math.abs((mean - phenotypeMean(p, t))) / phenotypeSd;
         return SDiff;
     }
 
@@ -604,32 +567,7 @@ class Sites {
         double var = 0;
         for (int t = 0; t < comm.traits; t++)
             var += Math.pow(mean - selectionDiff(p, t), 2);
-        var /= popSize();
-        return var;
-    }
-
-    double pSex() {
-        double mean = 0;
-        for (int i = 0; i < totSites; i++)
-            mean += pSex[i];
-        mean /= metaPopSize();
-        return mean;
-    }
-
-    double pSex(int p) {
-        double mean = 0;
-        for (int i = p * comm.microsites; i < (p + 1) * comm.microsites; i++)
-            mean += pSex[i];
-        mean /= popSize();
-        return mean;
-    }
-
-    double pSexVar(int p) {
-        double mean = pSex(p);
-        double var = 0;
-        for (int i = p * comm.microsites; i < (p + 1) * comm.microsites; i++)
-            var += Math.pow(mean - pSex[i], 2);
-        var /= popSize();
+        var /= popSize(p);
         return var;
     }
 }
@@ -638,6 +576,7 @@ class Sites {
 /* Ecological parameters/variables */
 class Comm {
     String envType = "GLOBAL";
+    String repType = "SEXUAL";
     int envDims = 1;
     int traits = 2;
     double minEnv = 0.2;
@@ -645,8 +584,7 @@ class Comm {
     double sigmaE = 0.0;
     int microsites = 600;
     double d = 0.1;
-    int nbrNewborns = (int) Math.round(microsites*d);
-    double[] demogrCost = {0.5};
+    double b = 1;
 
     int gridSize = 2;
     int nbrPatches = gridSize * gridSize;
@@ -654,7 +592,6 @@ class Comm {
     double[] envStep = {0.01};
     double[] dispRate = {0.01};
     double rho = 1;
-    double pSex = 0;
 
     int[] traitDim;
 
@@ -662,7 +599,6 @@ class Comm {
     double[][] dispNeighbours = new double[nbrPatches][nbrPatches];
 
     void init() {
-        nbrNewborns = (int) (microsites*d);
         nbrPatches = gridSize * gridSize;
         neighbours = new double[nbrPatches][nbrPatches];
         dispNeighbours = new double[nbrPatches][nbrPatches];
@@ -703,51 +639,33 @@ class Comm {
 class Evol {
     double omegaE = 0.02;
     double divF = 1;
+    int allLoci = 20;
     int traitLoci = 20;
     int lociPerTrait = traitLoci;
-    int sexLoci = 10;
-    int allLoci = traitLoci + sexLoci;
     double mutationRate = 1e-4;
     double sigmaZ = 0.01;
 
     int[] allMother;
     int[] allFather;
-    int[] allMotherShuffle;
-    int[] allFatherShuffle;
     int[] allGenes;
-    int[] somMother;
-    int[] somFather;
-    int[] somGenes;
     int[][] traitMother;
     int[][] traitFather;
     int[][] traitGenes;
-    int[] sexMother;
-    int[] sexFather;
-    int[] sexGenes;
 
     int longPos = 0;
 
     void init(Comm comm) {
         divF = 2 * Math.pow(Math.sqrt(comm.traits) * omegaE, 2);
 
-        allLoci = traitLoci + sexLoci;
-
+        allLoci = traitLoci;
         lociPerTrait = traitLoci / comm.traits;
 
         allMother = new int[allLoci];
         allFather = new int[allLoci];
-        allMotherShuffle = allMother.clone();
-        allFatherShuffle = allFather.clone();
         allGenes = new int[2 * allLoci];
-        somMother = new int[traitLoci];
-        somFather = new int[traitLoci];
-        somGenes = new int[2 * traitLoci];
         traitMother = new int[comm.traits][lociPerTrait];
         traitFather = new int[comm.traits][lociPerTrait];
         traitGenes = new int[comm.traits][2 * lociPerTrait];
-        sexMother = new int[sexLoci];
-        sexFather = new int[sexLoci];
-        sexGenes = new int[2 * sexLoci];
 
         /* somatic genes */
         for (int tr = 0; tr < comm.traits; tr++) {
@@ -755,19 +673,9 @@ class Evol {
                 longPos = l + (tr * lociPerTrait);
                 traitMother[tr][l] = longPos;
                 traitFather[tr][l] = traitMother[tr][l] + allLoci;
-                somMother[longPos] = traitMother[tr][l];
-                somFather[longPos] = somMother[longPos] + allLoci;
             }
             traitGenes[tr] = Auxils.arrayConcat(traitMother[tr], traitFather[tr]);
         }
-        somGenes = Auxils.arrayConcat(somMother, somFather);
-
-        /* sex genes */
-        for (int l = 0; l < sexLoci; l++) {
-            sexMother[l] = l + traitLoci;
-            sexFather[l] = sexMother[l] + allLoci;
-        }
-        sexGenes = Auxils.arrayConcat(sexMother, sexFather);
 
         /* all genes */
         for (int l = 0; l < allLoci; l++) {
@@ -824,7 +732,6 @@ class Init {
                 genotype[p][tr] = environment[p][comm.traitDim[tr]];
             }
         }
-        pSex = comm.pSex >= 0 ? comm.pSex : Auxils.random.nextDouble();
     }
 }
 
@@ -860,14 +767,11 @@ class Reader {
                     case "D":
                         comm.d = Double.parseDouble(words[1]);
                         break;
-                    case "PSEX":
-                        comm.pSex = Double.parseDouble(words[1]);
+                    case "B":
+                        comm.b = Double.parseDouble(words[1]);
                         break;
-                    case "COST":
-                        size = Integer.parseInt(words[1]);
-                        comm.demogrCost = new double[size];
-                        for (int i = 0; i < size; i++)
-                            comm.demogrCost[i] = Double.parseDouble(words[2 + i]);
+                    case "REPTYPE":
+                        comm.repType = words[1];
                         break;
                     case "GRIDSIZE":
                         comm.gridSize = Integer.parseInt(words[1]);
@@ -899,9 +803,6 @@ class Reader {
                         break;
                     case "TRAITLOCI":
                         evol.traitLoci = Integer.parseInt(words[1]);
-                        break;
-                    case "SEXLOCI":
-                        evol.sexLoci = Integer.parseInt(words[1]);
                         break;
                     case "MU":
                         evol.mutationRate = Double.parseDouble(words[1]);
@@ -941,13 +842,9 @@ class Auxils {
 
     static NormalizedGaussianSampler gaussianSampler = ZigguratNormalizedGaussianSampler.of(random);
     static SharedStateDiscreteSampler binomialSamplerSomatic;
-    static SharedStateDiscreteSampler binomialSamplerSex;
-    static CombinationSampler combinationSamplerPositionOffspring;
 
-    static void init(Comm comm, Evol evol) {
+    static void init(Evol evol) {
         binomialSamplerSomatic = Binomial.of(random, evol.traitLoci*2, evol.mutationRate);
-        binomialSamplerSex = Binomial.of(random, evol.sexLoci*2, evol.mutationRate);
-        combinationSamplerPositionOffspring = new CombinationSampler(random, comm.microsites, comm.nbrNewborns);
     }
 
     static void arrayShuffle(int[] array) {
@@ -998,30 +895,8 @@ class Auxils {
             if (!repl) {
                 newElements = arrayConcat(enumArray(0, pos - 1), enumArray(pos + 1, array.length - 1));
                 array = arrayElements(array, newElements);
-                cumProbs = arrayElements(cumProbs, newElements);
-                arrayCumSum(cumProbs);
-                arrayDiv(cumProbs, cumProbs[cumProbs.length - 1]);
-            }
-        }
-        return newArr;
-    }
-
-    //sampling with or without replacement
-    static double[] arraySampleProb(int n, double[] array, double[] probs, boolean repl) {
-        int pos;
-        int[] newElements;
-        double[] newArr = new double[n];
-        double[] cumProbs = probs.clone();
-        arrayCumSum(cumProbs);
-        arrayDiv(cumProbs, cumProbs[cumProbs.length - 1]);
-        for (int i = 0; i < n; i++) {
-            pos = Arrays.binarySearch(cumProbs, random.nextDouble());
-            pos = (pos >= 0) ? pos : (-pos - 1);
-            newArr[i] = array[pos];
-            if (!repl) {
-                newElements = arrayConcat(enumArray(0, pos - 1), enumArray(pos + 1, array.length - 1));
-                array = arrayElements(array, newElements);
-                cumProbs = arrayElements(cumProbs, newElements);
+                probs = arrayElements(probs, newElements);
+                cumProbs = probs.clone();
                 arrayCumSum(cumProbs);
                 arrayDiv(cumProbs, cumProbs[cumProbs.length - 1]);
             }
@@ -1042,26 +917,6 @@ class Auxils {
         int val;
         val = Arrays.binarySearch(cumProbs, random.nextDouble());
         return (val >= 0) ? val : (-val - 1);
-    }
-
-    static int countDistinct(byte[] arr, int n) {
-        // First sort the array so that all
-        // occurrences become consecutive
-        Arrays.sort(arr);
-
-        // Traverse the sorted array
-        int res = 0;
-        for (int i = 0; i < n; i++) {
-
-            // Move the index ahead while
-            // there are duplicates
-            while (i < n - 1 &&
-                    arr[i] == arr[i + 1]) {
-                i++;
-            }
-            res++;
-        }
-        return res;
     }
 
     static int[] enumArray(int from, int to) {
