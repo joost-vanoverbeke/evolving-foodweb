@@ -11,14 +11,15 @@ TRAITS		        1											number of traits (default = 2)
 MINENV              -1                                      	minimum environmental value (between 0 and 1) (default = 0.2)
 MAXENV              1                                      	maximum environmental value (between 0 and 1) (default = 0.8)
 MICROSITES          400    										number of microsites in each patch (default = 600)
+NBRSPECIES          2
 D                   0.1                                      	mortality rate (default = 0.1)
 B                   1
 REPTYPE             SEXUAL											initial probability of sexual reproduction (default = 0)
-GRIDSIZE            1                                        	number of patches = gridsize^2 (default = 2)
+GRIDSIZE            2                                        	number of patches = gridsize^2 (default = 2)
 ENVTYPE				LOCAL
 PCHANGE		        0.1											probability of environmental change along each niche dimension (default = 0.1)
-ENVSTEP		    1   0.025										    step size of environmental change (default = 0.01)
-M               1   0.0		                     			    dispersal rate between patches (should be set to 0 if gridsize = 1 (one patch)) (default = 0.01)
+ENVSTEP		    1   0.01										    step size of environmental change (default = 0.01)
+M               1   0.01		                     			    dispersal rate between patches (should be set to 0 if gridsize = 1 (one patch)) (default = 0.01)
 RHO                 1                                        	scaling factor determining the width of the dispersal kernel  (default = 1)
 
 evolution parameters
@@ -31,7 +32,7 @@ SIGMAZ              0.01                                     	phenotypic standar
 run parameters
 RUNS                1                                        	number of replicate runs (default = 1)
 TIMESTEPS           10000                                    	number of time steps in a run (default = 10000)
-PRINTSTEPS          10		                               	time steps between console output (default = 100)
-SAVESTEPS           10                                   	time steps between generation of output (default = 1000)
+PRINTSTEPS          100		                               	time steps between console output (default = 100)
+SAVESTEPS           100                                   	time steps between generation of output (default = 1000)
 OUTPUT              results_test.csv			  destination of output file (default = output_evolvingMetacommunity.csv)
 
