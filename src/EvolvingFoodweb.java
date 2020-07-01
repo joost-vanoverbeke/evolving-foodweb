@@ -43,26 +43,27 @@ public class EvolvingFoodweb {
                             System.out.format("run = %d; dims = %d; traits = %d; disp = %.4f; step = %.4f%n",
                                     (r + 1), comm.envDims, comm.traits, comm.dispRate[dr], comm.envStep[es]);
 
-                            comm.init();
+                            comm.init(run);
                             evol.init(comm);
                             Auxils.init(evol);
                             Init init = new Init(comm);
 
                             sites = new Sites(comm, evol, init, es, dr);
 
-                            System.out.format("  time = %d; metacommunity N = %d; fit = %f%n", 0, sites.foodwebSize(), sites.fitnessMean());
+                            System.out.format("  time = %d; resource = %f; metacommunity N = %d; fit = %f%n", 0, sites.resource[0], sites.foodwebSize(), sites.fitnessMean());
                             logResults(0, streamOut, r, es, dr);
 
-                            for (int t = 0; t < run.timeSteps; t++) {
+                            for (int t = 0; t < run.timeSteps/run.dt; t++) {
                                 sites.changeEnvironment();
                                 sites.contributionAdults();
+                                sites.updateResource();
                                 sites.reproduction();
 
-                                if (t == 0 || ((t + 1) % run.printSteps) == 0) {
-                                    System.out.format("  time = %d; metacommunity N = %d; fit = %f%n", (t + 1), sites.foodwebSize(), sites.fitnessMean());
+                                if (t == 0 || (((t + 1)*run.dt) % run.printSteps) == 0) {
+                                    System.out.format("  time = %f; resource = %f; metacommunity N = %d; fit = %f%n", (t + 1)*run.dt, sites.resource[0], sites.foodwebSize(), sites.fitnessMean());
                                 }
-                                if (t == 0 || ((t + 1) % run.saveSteps) == 0) {
-                                    logResults(t+1, streamOut, r, es, dr);
+                                if (t == 0 || (((t + 1)*run.dt) % run.saveSteps) == 0) {
+                                    logResults((t + 1)*run.dt, streamOut, r, es, dr);
                                 }
                             }
                         }
@@ -74,8 +75,8 @@ public class EvolvingFoodweb {
     }
 
     static void logTitles(PrintWriter out) {
-        out.print("gridsize;patches;p_e_change;e_step;m;rho;dims;sigma_e;microsites;traits;traitLoci;sigma_z;mu;omega_e;d;b;"
-                + "run;time;patch;species;N;fitness_mean;fitness_var;fitness_geom;load_mean;load_var;S_mean;S_var");
+        out.print("gridsize;patches;p_e_change;e_step;m;rho;dims;sigma_e;microsites;traits;traitLoci;sigma_z;mu;omega_e;d;"
+                + "run;time;patch;resource;species;N;fitness_mean;fitness_var;fitness_geom;load_mean;load_var;S_mean;S_var");
         for (int tr = 0; tr < comm.traits; tr++)
             out.format(";dim_tr%d;e_dim_tr%d;genotype_mean_tr%d;genotype_var_tr%d;phenotype_mean_tr%d;phenotype_var_tr%d;fitness_mean_tr%d;fitness_var_tr%d;"
                             + "genotype_meta_var_tr%d;phenotype_meta_var_tr%d",
@@ -83,15 +84,15 @@ public class EvolvingFoodweb {
         out.println("");
     }
 
-    static void logResults(int t, PrintWriter out, int r, int es, int dr) {
+    static void logResults(double t, PrintWriter out, int r, int es, int dr) {
         for (int p = 0; p < comm.nbrPatches; p++)
             for (int s = 0; s < comm.nbrSpecies; s++) {
-                out.format("%d;%d;%f;%f;%f;%f;%d;%f;%d;%d;%d;%f;%f;%f;%f;%f",
-                        comm.gridSize, comm.nbrPatches, comm.pChange, comm.envStep[es], comm.dispRate[dr], comm.rho, comm.envDims, comm.sigmaE, comm.microsites, comm.traits, evol.traitLoci, evol.sigmaZ, evol.mutationRate, evol.omegaE, comm.d, comm.b);
-                out.format(";%d;%d;%d",
+                out.format("%d;%d;%f;%f;%f;%f;%d;%f;%d;%d;%d;%f;%f;%f;%f",
+                        comm.gridSize, comm.nbrPatches, comm.pChange, comm.envStep[es], comm.dispRate[dr], comm.rho, comm.envDims, comm.sigmaE, comm.microsites, comm.traits, evol.traitLoci, evol.sigmaZ, evol.mutationRate, evol.omegaE, comm.d);
+                out.format(";%d;%f;%d",
                         r + 1, t, p + 1);
-                out.format(";%d;%d;%f;%f;%f;%f;%f;%f;%f",
-                        s + 1, sites.popSize(p, s), sites.fitnessMean(p, s), sites.fitnessVar(p, s), sites.fitnessGeom(p, s), sites.loadMean(p, s), sites.loadVar(p, s), sites.selectionDiff(p, s), sites.selectionDiffVar(p, s));
+                out.format(";%f;%d;%d;%f;%f;%f;%f;%f;%f;%f",
+                        sites.resource[p], s + 1, sites.popSize(p, s), sites.fitnessMean(p, s), sites.fitnessVar(p, s), sites.fitnessGeom(p, s), sites.loadMean(p, s), sites.loadVar(p, s), sites.selectionDiff(p, s), sites.selectionDiffVar(p, s));
                 for (int tr = 0; tr < comm.traits; tr++)
                     out.format(";%d;%f;%f;%f;%f;%f;%f;%f;%f;%f",
                             sites.comm.traitDim[tr] + 1, sites.environment[p][sites.comm.traitDim[tr]], sites.genotypeMean(p, s, tr), sites.genotypeVar(p, s, tr), sites.phenotypeMean(p, s, tr), sites.phenotypeVar(p, s, tr), sites.traitFitnessMean(p, s, tr), sites.traitFitnessVar(p, s, tr),
@@ -118,13 +119,19 @@ class Sites {
     int[] patch;
     int[] species;
     boolean[] alive;
+    double[] bodyMass;
+    double[] mortality;
+    double[][] uptake;
+    double[] eaten;
+
     double[][] traitPhenotype;
     double[][] traitFitness;
     double[] fitness;
-
     byte[][] genotype;
 
     double[][] environment;
+    double[] resource;
+    double[] uptakeResource;
 
     double[] nbrNewborns;
     int[] nbrEmpty;
@@ -146,13 +153,19 @@ class Sites {
         patch = new int[totSites];
         species = new int[totSites];
         alive = new boolean[totSites];
+        bodyMass = new double[totSites];
+        mortality = new double[totSites];
+        uptake = new double[totSites][3];
+        eaten = new double[totSites];
+
         traitPhenotype = new double[totSites][comm.traits];
         traitFitness = new double[totSites][comm.traits];
         fitness = new double[totSites];
         genotype = new byte[totSites][2 * evol.allLoci];
 
         environment = new double[comm.nbrPatches][comm.envDims];
-
+        resource = new double[comm.nbrPatches];
+        uptakeResource = new double[comm.nbrPatches];
 
         nbrNewborns = new double[comm.nbrPatches];
         nbrEmpty = new int[comm.nbrPatches];
@@ -163,8 +176,12 @@ class Sites {
 
         double indGtp;
         Arrays.fill(alive, false);
+        Arrays.fill(mortality, 1);
+        Arrays.fill(eaten, 0);
+        Arrays.fill(uptakeResource, 0);
 
         for (int p = 0; p < comm.nbrPatches; p++) {
+            resource[p] = init.resource;
             if (comm.envDims >= 0) System.arraycopy(init.environment[p], 0, environment[p], 0, comm.envDims);
             for (int m = (p * comm.microsites); m < ((p + 1) * comm.microsites); m++)
                 patch[m] = p;
@@ -173,6 +190,9 @@ class Sites {
                 species[m] = init.species[p];
                 alive[m] = true;
                 fitness[m] = 1;
+                bodyMass[m] = init.bodyMass;
+                newBody(m);
+
                 for (int tr = 0; tr < comm.traits; tr++) {
                     traitFitness[m][tr] = 1;
                     indGtp = init.genotype[p][tr];
@@ -194,6 +214,14 @@ class Sites {
 
     double calcFitness(double phenot, double env) {
         return Math.exp(-(Math.pow(phenot - env, 2)) / evol.divF);
+    }
+
+    void newBody(int i) {
+        mortality[i] = comm.d*Math.pow(bodyMass[i], comm.dPow);
+        uptake[i][0] = comm.uptakePars[0]*Math.pow(bodyMass[i], comm.iPow);
+        uptake[i][1] = comm.uptakePars[1]*Math.pow(bodyMass[i], -comm.iPow);
+        uptake[i][2] = comm.uptakePars[2];
+        eaten[i] = 0;
     }
 
     void changeEnvironment() {
@@ -233,6 +261,22 @@ class Sites {
         }
     }
 
+    void doUptake(int i) {
+        int p = patch[i];
+        eaten[i] = (uptake[i][0]*Math.pow(resource[p], uptake[i][2]))/(1 + uptake[i][0]*uptake[i][1]*Math.pow(resource[p], uptake[i][2]));
+        uptakeResource[patch[i]] += eaten[i];
+        eaten[i] *= 10*comm.assimilationEff;
+    }
+
+    void updateResource() {
+        for (int p = 0; p < comm.nbrPatches; p++) {
+            uptakeResource[p] = Math.min(uptakeResource[p], resource[p]);
+            resource[p] += comm.inRate - resource[p] * comm.outRate - uptakeResource[p];
+            resource[p] = Math.max(0, resource[p]);
+        }
+        Arrays.fill(uptakeResource, 0);
+    }
+
     void contributionAdults() {
         double contr;
         int p, p2, s, s2, m;
@@ -246,21 +290,25 @@ class Sites {
             p = patch[i];
             s = species[i];
             m = i%comm.microsites;
-            if(alive[i])
-                alive[i] = Auxils.random.nextDouble() <= (1 - comm.d);
-//            alive[i] = alive[i] ? (Auxils.random.nextDouble() <= ((1 - comm.d)*fitness[i])) : alive[i];
-            if (!alive[i]) {
-                emptyPos[p][nbrEmpty[p]++] = i;
+            if(alive[i]) {
+//                alive[i] = Auxils.random.nextDouble() <= (1 - mortality[i]);
+                alive[i] = alive[i] ? (Auxils.random.nextDouble() <= ((1 - mortality[i]) * fitness[i])) : alive[i];
             }
-            contr = alive[i] ? fitness[i] : 0;
-//            contr = alive[i] ? 1 : 0;
+            if (alive[i]) {
+                doUptake(i);
+                contr = 1;
+            }
+            else {
+                emptyPos[p][nbrEmpty[p]++] = i;
+                contr = 0;
+            }
             if (comm.repType.equals("SEXUAL")) {
                 fathersCumProb[p][s][m] = contr;
                 if (m > 0)
                     for(s2 = 0; s2 < comm.nbrSpecies; s2++)
                         fathersCumProb[p][s2][m] += fathersCumProb[p][s2][m-1];
             }
-            contr *= comm.b;
+            contr *= eaten[i];
             for (p2 = 0; p2 < comm.nbrPatches; p2++) {
                 mothersCumProb[p2][i] = contr * comm.dispNeighbours[p2][p];
                 if (i > 0)
@@ -269,7 +317,8 @@ class Sites {
         }
         for (p = 0; p < comm.nbrPatches; p++) {
             nbrNewborns[p] = mothersCumProb[p][totSites-1];
-            Auxils.arrayDiv(mothersCumProb[p], mothersCumProb[p][totSites-1]);
+            nbrNewborns[p] = Math.min(nbrNewborns[p], resource[p]*10*comm.assimilationEff);
+                    Auxils.arrayDiv(mothersCumProb[p], mothersCumProb[p][totSites-1]);
             if (comm.repType.equals("SEXUAL"))
                 for (s = 0; s < comm.nbrSpecies; s++)
                     Auxils.arrayDiv(fathersCumProb[p][s], fathersCumProb[p][s][comm.microsites-1]);
@@ -284,13 +333,6 @@ class Sites {
             nbrSettled = Math.min(newborns, nbrEmpty[p]);
             posOffspring = Auxils.arraySample(nbrSettled, Arrays.copyOf(emptyPos[p], nbrEmpty[p]));
 
-//debug
-//            System.out.println(" patch " + p);
-//            System.out.println("   nbrNewborns " + nbrNewborns[p]);
-//            System.out.println("   nbrEmpty " + nbrEmpty[p]);
-//            System.out.println("   newborns " + newborns);
-//            System.out.println("   settled " + nbrSettled);
-
             //sampling parents with replacement!
             //selfing allowed!
             for (int i = 0; i < nbrSettled; i++) {
@@ -298,14 +340,6 @@ class Sites {
                 m = Auxils.randIntCumProb(mothersCumProb[p]);
                 s = species[m];
                 patchMother = patch[m];
-
-//debug
-//                System.out.println("     offspr " + i);
-//                System.out.println("       pos o " + o);
-//                System.out.println("       alive o " + alive[o]);
-//                System.out.println("       pos m " + m);
-//                System.out.println("       alive m " + alive[m]);
-
 
                 if (comm.repType.equals("SEXUAL")) {
                     f = patchMother*comm.microsites + Auxils.randIntCumProb(fathersCumProb[patchMother][s]);
@@ -316,6 +350,9 @@ class Sites {
                 species[o] = s;
                 alive[o] = true;
                 fitness[o] = 1;
+                bodyMass[o] = bodyMass[m];
+                newBody(o);
+
                 for (int tr = 0; tr < comm.traits; tr++) {
                     traitPhenotype[o][tr] = calcPhenotype(o, tr);
                     traitFitness[o][tr] = calcFitness(traitPhenotype[o][tr], environment[p][comm.traitDim[tr]]);
@@ -600,9 +637,16 @@ class Comm {
     double sigmaE = 0.0;
     int microsites = 600;
 
+    double inRate = 100;
+    double outRate = 0.1;
+
+    double[] uptakePars = {1e-4, 0.4, 1.5};
+    double iPow = 0.75;
+    double assimilationEff = 0.7;
+
     int nbrSpecies = 1;
     double d = 0.1;
-    double b = 1;
+    double dPow = -0.25;
 
     int gridSize = 2;
     int nbrPatches = gridSize * gridSize;
@@ -616,7 +660,15 @@ class Comm {
     double[][] neighbours = new double[nbrPatches][nbrPatches];
     double[][] dispNeighbours = new double[nbrPatches][nbrPatches];
 
-    void init() {
+    void init(Run run) {
+
+        inRate *= run.dt;
+        outRate *= run.dt;
+        d *= run.dt;
+        pChange *= run.dt;
+        uptakePars[0] *= run.dt;
+        uptakePars[1] /= run.dt;
+
         nbrPatches = gridSize * gridSize;
         neighbours = new double[nbrPatches][nbrPatches];
         dispNeighbours = new double[nbrPatches][nbrPatches];
@@ -707,6 +759,7 @@ class Evol {
 
 /* run parameters */
 class Run {
+    double dt = 0.1;
     int runs = 1;
     int timeSteps = 10000;
     int printSteps = 100;
@@ -717,6 +770,8 @@ class Run {
 
 /* initialize simulation run */
 class Init {
+    int resource;
+    double bodyMass;
     double[][] environment;
     int[] species;
     int[] N;
@@ -724,12 +779,16 @@ class Init {
 
     public Init(Comm comm) {
         double dEnv;
+        resource = 100;
         environment = new double[comm.nbrPatches][comm.envDims];
         species = new int[comm.nbrPatches];
         N = new int[comm.nbrPatches];
         genotype = new double[comm.nbrPatches][comm.traits];
 
-        Arrays.fill(N, comm.microsites);
+        bodyMass = 1;
+
+//        Arrays.fill(N, comm.microsites);
+        Arrays.fill(N, 1000);
 
         if (comm.envType.equals("GLOBAL")) {
             for (int d = 0; d < comm.envDims; d++) {
@@ -788,9 +847,6 @@ class Reader {
                         break;
                     case "D":
                         comm.d = Double.parseDouble(words[1]);
-                        break;
-                    case "B":
-                        comm.b = Double.parseDouble(words[1]);
                         break;
                     case "REPTYPE":
                         comm.repType = words[1];
