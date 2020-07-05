@@ -56,13 +56,14 @@ public class EvolvingFoodweb {
                             for (int t = 0; t < run.timeSteps/run.dt; t++) {
                                 sites.changeEnvironment();
                                 sites.contributionAdults();
-                                sites.updateResource();
                                 sites.reproduction();
+                                sites.updateResource();
+                                sites.updatePrey();
 
-                                if (t == 0 || (((t + 1)*run.dt) % run.printSteps) == 0) {
+                                if (((t+1)*run.dt == 1) || (((t + 1)*run.dt) % run.printSteps) == 0) {
                                     System.out.format("  time = %f; resource = %f; metacommunity N = %d; fit = %f%n", (t + 1)*run.dt, sites.resource[0], sites.foodwebSize(), sites.fitnessMean());
                                 }
-                                if (t == 0 || (((t + 1)*run.dt) % run.saveSteps) == 0) {
+                                if (((t+1)*run.dt == 1) || (((t + 1)*run.dt) % run.saveSteps) == 0) {
                                     logResults((t + 1)*run.dt, streamOut, r, es, dr);
                                 }
                             }
@@ -76,7 +77,7 @@ public class EvolvingFoodweb {
 
     static void logTitles(PrintWriter out) {
         out.print("gridsize;patches;p_e_change;e_step;m;rho;dims;sigma_e;microsites;traits;traitLoci;sigma_z;mu;omega_e;d;"
-                + "run;time;patch;resource;species;N;fitness_mean;fitness_var;fitness_geom;load_mean;load_var;S_mean;S_var");
+                + "run;time;patch;resource;species;bodymass;N;fitness_mean;fitness_var;fitness_geom;load_mean;load_var;S_mean;S_var");
         for (int tr = 0; tr < comm.traits; tr++)
             out.format(";dim_tr%d;e_dim_tr%d;genotype_mean_tr%d;genotype_var_tr%d;phenotype_mean_tr%d;phenotype_var_tr%d;fitness_mean_tr%d;fitness_var_tr%d;"
                             + "genotype_meta_var_tr%d;phenotype_meta_var_tr%d",
@@ -91,8 +92,8 @@ public class EvolvingFoodweb {
                         comm.gridSize, comm.nbrPatches, comm.pChange, comm.envStep[es], comm.dispRate[dr], comm.rho, comm.envDims, comm.sigmaE, comm.microsites, comm.traits, evol.traitLoci, evol.sigmaZ, evol.mutationRate, evol.omegaE, comm.d);
                 out.format(";%d;%f;%d",
                         r + 1, t, p + 1);
-                out.format(";%f;%d;%d;%f;%f;%f;%f;%f;%f;%f",
-                        sites.resource[p], s + 1, sites.popSize(p, s), sites.fitnessMean(p, s), sites.fitnessVar(p, s), sites.fitnessGeom(p, s), sites.loadMean(p, s), sites.loadVar(p, s), sites.selectionDiff(p, s), sites.selectionDiffVar(p, s));
+                out.format(";%f;%d;%f;%d;%f;%f;%f;%f;%f;%f;%f",
+                        sites.resource[p], s + 1, sites.popBodyMass(p, s), sites.popSize(p, s), sites.fitnessMean(p, s), sites.fitnessVar(p, s), sites.fitnessGeom(p, s), sites.loadMean(p, s), sites.loadVar(p, s), sites.selectionDiff(p, s), sites.selectionDiffVar(p, s));
                 for (int tr = 0; tr < comm.traits; tr++)
                     out.format(";%d;%f;%f;%f;%f;%f;%f;%f;%f;%f",
                             sites.comm.traitDim[tr] + 1, sites.environment[p][sites.comm.traitDim[tr]], sites.genotypeMean(p, s, tr), sites.genotypeVar(p, s, tr), sites.phenotypeMean(p, s, tr), sites.phenotypeVar(p, s, tr), sites.traitFitnessMean(p, s, tr), sites.traitFitnessVar(p, s, tr),
@@ -130,13 +131,16 @@ class Sites {
     byte[][] genotype;
 
     double[][] environment;
+    int[][] abundance;
     double[] resource;
     double[] uptakeResource;
+    double[][] uptakePrey;
+    int[][] nbrPrey;
+    int[][][] preyPos;
 
-    double[] nbrNewborns;
     int[] nbrEmpty;
-
     int[][] emptyPos;
+    double[] nbrNewborns;
     double[][] mothersCumProb;
     double[][][] fathersCumProb;
 
@@ -166,11 +170,14 @@ class Sites {
         environment = new double[comm.nbrPatches][comm.envDims];
         resource = new double[comm.nbrPatches];
         uptakeResource = new double[comm.nbrPatches];
+        abundance = new int[comm.nbrPatches][comm.nbrSpecies];
+        uptakePrey = new double[comm.nbrPatches][comm.nbrSpecies];
+        nbrPrey = new int[comm.nbrPatches][comm.nbrSpecies];
+        preyPos = new int[comm.nbrPatches][comm.nbrSpecies][comm.microsites];
 
-        nbrNewborns = new double[comm.nbrPatches];
         nbrEmpty = new int[comm.nbrPatches];
-
         emptyPos = new int[comm.nbrPatches][comm.microsites];
+        nbrNewborns = new double[comm.nbrPatches];
         mothersCumProb = new double[comm.nbrPatches][totSites];
         fathersCumProb = new double[comm.nbrPatches][comm.nbrSpecies][comm.microsites];
 
@@ -181,28 +188,22 @@ class Sites {
         Arrays.fill(uptakeResource, 0);
 
         for (int p = 0; p < comm.nbrPatches; p++) {
+            Arrays.fill(abundance[p], 0);
+
             resource[p] = init.resource;
             if (comm.envDims >= 0) System.arraycopy(init.environment[p], 0, environment[p], 0, comm.envDims);
             for (int m = (p * comm.microsites); m < ((p + 1) * comm.microsites); m++)
                 patch[m] = p;
             int[] posInds = Auxils.arraySample(init.N[p], Auxils.enumArray(p * comm.microsites, ((p + 1) * comm.microsites) - 1));
             for (int m : posInds) {
-                species[m] = init.species[p];
-                alive[m] = true;
-                fitness[m] = 1;
-                bodyMass[m] = init.bodyMass;
-                newBody(m);
-
                 for (int tr = 0; tr < comm.traits; tr++) {
-                    traitFitness[m][tr] = 1;
                     indGtp = init.genotype[p][tr];
                     for (int l : evol.traitGenes[tr]) {
                         genotype[m][l] = (byte) Math.round(Auxils.random.nextDouble() * 0.5 * (Auxils.random.nextBoolean() ? -1 : 1) + indGtp);
                     }
-                    traitPhenotype[m][tr] = calcPhenotype(m, tr);
-                    traitFitness[m][tr] = calcFitness(traitPhenotype[m][tr], environment[p][comm.traitDim[tr]]);
-                    fitness[m] *= traitFitness[m][tr];
                 }
+                int s = Auxils.randIntCumProb(init.speciesCumProb);
+                newBody(m, s, init.bodyMass[s]);
             }
         }
     }
@@ -216,12 +217,28 @@ class Sites {
         return Math.exp(-(Math.pow(phenot - env, 2)) / evol.divF);
     }
 
-    void newBody(int i) {
+    void newBody(int i, int s, double bm) {
+        int p = patch[i];
+        species[i] = s;
+        alive[i] = true;
+        fitness[i] = 1;
+        bodyMass[i] = bm;
         mortality[i] = comm.d*Math.pow(bodyMass[i], comm.dPow);
         uptake[i][0] = comm.uptakePars[0]*Math.pow(bodyMass[i], comm.iPow);
         uptake[i][1] = comm.uptakePars[1]*Math.pow(bodyMass[i], -comm.iPow);
         uptake[i][2] = comm.uptakePars[2];
         eaten[i] = 0;
+        abundance[patch[i]][s]++;
+        for (int tr = 0; tr < comm.traits; tr++) {
+            traitPhenotype[i][tr] = calcPhenotype(i, tr);
+            traitFitness[i][tr] = calcFitness(traitPhenotype[i][tr], environment[p][comm.traitDim[tr]]);
+            fitness[i] *= traitFitness[i][tr];
+        }
+    }
+
+    void deadBody(int i) {
+        alive[i] = false;
+        abundance[patch[i]][species[i]]--;
     }
 
     void changeEnvironment() {
@@ -262,19 +279,80 @@ class Sites {
     }
 
     void doUptake(int i) {
+        double bmPrey = bodyMass[i]/10.0;
+        int posPrey = (int) Math.round(Math.log10(bmPrey));
         int p = patch[i];
-        eaten[i] = (uptake[i][0]*Math.pow(resource[p], uptake[i][2]))/(1 + uptake[i][0]*uptake[i][1]*Math.pow(resource[p], uptake[i][2]));
-        uptakeResource[patch[i]] += eaten[i];
-        eaten[i] *= 10*comm.assimilationEff;
+        if (posPrey == -1) {
+            eaten[i] = (uptake[i][0] * Math.pow(resource[p], uptake[i][2])) / (1 + uptake[i][0] * uptake[i][1] * Math.pow(resource[p], uptake[i][2]));
+            uptakeResource[patch[i]] += eaten[i];
+            eaten[i] *= comm.resourceConversion;
+        }
+        else {
+            eaten[i] = (uptake[i][0] * Math.pow(bmPrey * abundance[p][posPrey], uptake[i][2])) / (1 + uptake[i][0] * uptake[i][1] * Math.pow(bmPrey * abundance[p][posPrey], uptake[i][2]));
+            uptakePrey[patch[i]][posPrey] += eaten[i]/bmPrey;
+        }
+        eaten[i] *= comm.assimilationEff/bodyMass[i];
     }
 
     void updateResource() {
+//debug
+//        System.out.println("    updateResource");
+//        for (int p = 0; p < comm.nbrPatches; p++)
+//            System.out.println("      uptakeResource " + uptakeResource[p] + ";  resource " + resource[p]);
+//
+
         for (int p = 0; p < comm.nbrPatches; p++) {
             uptakeResource[p] = Math.min(uptakeResource[p], resource[p]);
             resource[p] += comm.inRate - resource[p] * comm.outRate - uptakeResource[p];
+//            resource[p] += comm.R*(1 - resource[p]/comm.K) - uptakeResource[p];
             resource[p] = Math.max(0, resource[p]);
         }
         Arrays.fill(uptakeResource, 0);
+
+//debug
+//        System.out.println("    end updateResource");
+//        for (int p = 0; p < comm.nbrPatches; p++)
+//            System.out.println("      uptakeResource " + uptakeResource[p] + ";  resource " + resource[p]);
+//
+
+    }
+
+    void updatePrey() {
+        int deadPrey;
+        int[] posPrey;
+
+//debug
+//        System.out.println("    updatePrey");
+//        for (int p = 0; p < comm.nbrPatches; p++) {
+//            System.out.println("      abundance " + Arrays.toString(abundance[p]));
+//        }
+//
+
+        for (int p = 0; p < comm.nbrPatches; p++)
+            for (int s = 0; s < comm.nbrSpecies; s++) {
+                deadPrey = (int) Math.min(uptakePrey[p][s], abundance[p][s]);
+
+//debug
+//                System.out.println("   patch " + p + ";  species " + s);
+//                System.out.println("    species " + s);
+//                System.out.println("      uptakePrey " + uptakePrey[p][s] + ";  abundance " + abundance[p][s]);
+//                System.out.println("      nbrPrey " + nbrPrey[p][s] + ";  deadPrey " + deadPrey);
+//
+
+                posPrey = Auxils.arraySample(deadPrey, Arrays.copyOf(preyPos[p][s], nbrPrey[p][s]));
+                for (int i = 0; i < deadPrey; i++)
+                    deadBody(posPrey[i]);
+                uptakePrey[p][s] = 0;
+                abundance[p][s] = Math.max(0, abundance[p][s]);
+        }
+
+//debug
+//        System.out.println("    end updatePrey");
+//        for (int p = 0; p < comm.nbrPatches; p++) {
+//            System.out.println("      abundance " + Arrays.toString(abundance[p]));
+//        }
+//
+
     }
 
     void contributionAdults() {
@@ -282,20 +360,29 @@ class Sites {
         int p, p2, s, s2, m;
 
         Arrays.fill(nbrEmpty, 0);
-        for (p = 0; p < comm.nbrPatches; p++)
+        for (p = 0; p < comm.nbrPatches; p++) {
+            Arrays.fill(nbrPrey[p], 0);
             for (s = 0; s < comm.nbrSpecies; s++)
                 Arrays.fill(fathersCumProb[p][s], 0);
+        }
+
+// debug
+//        System.out.println("    contributionAdults");
+//        for (p = 0; p < comm.nbrPatches; p++) {
+//            System.out.println("      abundance " + Arrays.toString(abundance[p]));
+//            System.out.println("      nbrPrey " + Arrays.toString(nbrPrey[p]));
+//        }
+//
 
         for (int i = 0; i < totSites; i++) {
             p = patch[i];
             s = species[i];
             m = i%comm.microsites;
-            if(alive[i]) {
-//                alive[i] = Auxils.random.nextDouble() <= (1 - mortality[i]);
-                alive[i] = alive[i] ? (Auxils.random.nextDouble() <= ((1 - mortality[i]) * fitness[i])) : alive[i];
-            }
+            if (alive[i] && (Auxils.random.nextDouble() > ((1 - mortality[i]) * fitness[i])))
+                deadBody(i);
             if (alive[i]) {
                 doUptake(i);
+                preyPos[p][s][nbrPrey[p][s]++] = i;
                 contr = 1;
             }
             else {
@@ -317,21 +404,41 @@ class Sites {
         }
         for (p = 0; p < comm.nbrPatches; p++) {
             nbrNewborns[p] = mothersCumProb[p][totSites-1];
-            nbrNewborns[p] = Math.min(nbrNewborns[p], resource[p]*10*comm.assimilationEff);
-                    Auxils.arrayDiv(mothersCumProb[p], mothersCumProb[p][totSites-1]);
+            Auxils.arrayDiv(mothersCumProb[p], mothersCumProb[p][totSites-1]);
             if (comm.repType.equals("SEXUAL"))
                 for (s = 0; s < comm.nbrSpecies; s++)
                     Auxils.arrayDiv(fathersCumProb[p][s], fathersCumProb[p][s][comm.microsites-1]);
         }
+
+// debug
+//        System.out.println("    end contributionAdults");
+//        for (p = 0; p < comm.nbrPatches; p++) {
+//            System.out.println("      abundance " + Arrays.toString(abundance[p]));
+//            System.out.println("      nbrPrey " + Arrays.toString(nbrPrey[p]));
+//        }
+//
+
     }
 
     void reproduction() {
         int s, o, m, f, newborns, nbrSettled, patchMother;
         int[] posOffspring;
+
+//debug
+//        System.out.println("    reproduction");
+//        for (int p = 0; p < comm.nbrPatches; p++) {
+//            System.out.println("      abundance " + Arrays.toString(abundance[p]));
+//        }
+//
+
         for (int p = 0; p < comm.nbrPatches; p++) {
             newborns = (nbrNewborns[p] < 1) ? ((Auxils.random.nextDouble() <= nbrNewborns[p]) ? 1 : 0) : (int) nbrNewborns[p];
             nbrSettled = Math.min(newborns, nbrEmpty[p]);
             posOffspring = Auxils.arraySample(nbrSettled, Arrays.copyOf(emptyPos[p], nbrEmpty[p]));
+
+//debug
+//            System.out.println("      nbrNewborns " + nbrNewborns[p] + ";  newborns " + newborns + ";  nbrSettled " + nbrSettled);
+//
 
             //sampling parents with replacement!
             //selfing allowed!
@@ -340,26 +447,23 @@ class Sites {
                 m = Auxils.randIntCumProb(mothersCumProb[p]);
                 s = species[m];
                 patchMother = patch[m];
-
-                if (comm.repType.equals("SEXUAL")) {
+               if (comm.repType.equals("SEXUAL")) {
                     f = patchMother*comm.microsites + Auxils.randIntCumProb(fathersCumProb[patchMother][s]);
                     inherit(o, m, f);
                 } else
                     inherit(o, m);
                 mutate(o);
-                species[o] = s;
-                alive[o] = true;
-                fitness[o] = 1;
-                bodyMass[o] = bodyMass[m];
-                newBody(o);
-
-                for (int tr = 0; tr < comm.traits; tr++) {
-                    traitPhenotype[o][tr] = calcPhenotype(o, tr);
-                    traitFitness[o][tr] = calcFitness(traitPhenotype[o][tr], environment[p][comm.traitDim[tr]]);
-                    fitness[o] *= traitFitness[o][tr];
-                }
+                newBody(o, s, bodyMass[m]);
             }
         }
+
+//debug
+//        System.out.println("    end reproduction");
+//        for (int p = 0; p < comm.nbrPatches; p++) {
+//            System.out.println("      abundance " + Arrays.toString(abundance[p]));
+//        }
+//
+
     }
 
     /* inheritance for asexual reproduction (one parent) */
@@ -405,12 +509,25 @@ class Sites {
         return N;
     }
 
+//    int popSize(int p, int s) {
+//        int N = 0;
+//        for (int i = p*comm.microsites; i < ((p + 1) * comm.microsites); i++)
+//            if (alive[i] && species[i] == s)
+//                N++;
+//        return N;
+//    }
+
     int popSize(int p, int s) {
-        int N = 0;
+        return abundance[p][s];
+    }
+
+    double popBodyMass(int p, int s) {
+        int mass = 0;
         for (int i = p*comm.microsites; i < ((p + 1) * comm.microsites); i++)
             if (alive[i] && species[i] == s)
-                N++;
-        return N;
+                mass += bodyMass[i];
+        mass /= popSize(p, s);
+        return mass;
     }
 
     double genotypeMean(int s, int t) {
@@ -637,10 +754,15 @@ class Comm {
     double sigmaE = 0.0;
     int microsites = 600;
 
-    double inRate = 100;
+    double inRate = 200;
     double outRate = 0.1;
+    double resourceConversion = 10;
+//    double resourceMass = 0.1;
+//    double K = 10000;
+//    double R = 100;
 
-    double[] uptakePars = {1e-4, 0.4, 1.5};
+
+    double[] uptakePars = {1e-4, 0.4, 1};
     double iPow = 0.75;
     double assimilationEff = 0.7;
 
@@ -664,6 +786,7 @@ class Comm {
 
         inRate *= run.dt;
         outRate *= run.dt;
+//        R *= run.dt;
         d *= run.dt;
         pChange *= run.dt;
         uptakePars[0] *= run.dt;
@@ -771,24 +894,27 @@ class Run {
 /* initialize simulation run */
 class Init {
     int resource;
-    double bodyMass;
+    double[] bodyMass;
     double[][] environment;
-    int[] species;
+//    int[] species;
+    double[] speciesCumProb;
     int[] N;
     double[][] genotype;
 
     public Init(Comm comm) {
         double dEnv;
-        resource = 100;
+        resource = 1000;
         environment = new double[comm.nbrPatches][comm.envDims];
-        species = new int[comm.nbrPatches];
+//        species = new int[comm.nbrPatches];
+        speciesCumProb = new double[comm.nbrSpecies];
         N = new int[comm.nbrPatches];
         genotype = new double[comm.nbrPatches][comm.traits];
 
-        bodyMass = 1;
+        bodyMass = new double[comm.nbrSpecies];
 
 //        Arrays.fill(N, comm.microsites);
-        Arrays.fill(N, 1000);
+        Arrays.fill(N, 5000);
+        Arrays.fill(speciesCumProb, 0);
 
         if (comm.envType.equals("GLOBAL")) {
             for (int d = 0; d < comm.envDims; d++) {
@@ -804,8 +930,15 @@ class Init {
             }
         }
 
+        for (int s = 0; s < comm.nbrSpecies; s++) {
+            bodyMass[s] = Math.pow(10, s);
+            speciesCumProb[s] = 1.0/bodyMass[s];
+        }
+        Auxils.arrayCumSum(speciesCumProb);
+        Auxils.arrayDiv(speciesCumProb, speciesCumProb[comm.nbrSpecies-1]);
+
         for (int p = 0; p < comm.nbrPatches; p++) {
-            species[p] = p%comm.nbrSpecies;
+//            species[p] = p%comm.nbrSpecies;
             for (int tr = 0; tr < comm.traits; tr++) {
                 genotype[p][tr] = environment[p][comm.traitDim[tr]];
             }

@@ -11,18 +11,18 @@ TRAITS		        1											number of traits (default = 2)
 MINENV              -1                                      	minimum environmental value (between 0 and 1) (default = 0.2)
 MAXENV              1                                      	maximum environmental value (between 0 and 1) (default = 0.8)
 MICROSITES          10000    										number of microsites in each patch (default = 600)
-NBRSPECIES          2
+NBRSPECIES          3
 D                   0.1                                      	mortality rate (default = 0.1)
 REPTYPE             SEXUAL											initial probability of sexual reproduction (default = 0)
 GRIDSIZE            1                                        	number of patches = gridsize^2 (default = 2)
 ENVTYPE				LOCAL
 PCHANGE		        0.1											probability of environmental change along each niche dimension (default = 0.1)
-ENVSTEP		    1   0.01										    step size of environmental change (default = 0.01)
+ENVSTEP		    1   0.0										    step size of environmental change (default = 0.01)
 M               1   0.0		                     			    dispersal rate between patches (should be set to 0 if gridsize = 1 (one patch)) (default = 0.01)
 RHO                 1                                        	scaling factor determining the width of the dispersal kernel  (default = 1)
 
 evolution parameters
-OMEGAE              0.05                                     	niche tolerance (default = 0.02)
+OMEGAE              0.5                                     	niche tolerance (default = 0.02)
 TRAITLOCI           20                                       	total number of diploid loci coding for traits (default = 20 => 10 for each of 2 default trait)
 MU                  1e-4                                     	mutation rate (default = 1e-4)
 SIGMAZ              0.01                                     	phenotypic standard deviation (default = 0.01)
