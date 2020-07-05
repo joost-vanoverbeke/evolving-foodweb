@@ -295,12 +295,6 @@ class Sites {
     }
 
     void updateResource() {
-//debug
-//        System.out.println("    updateResource");
-//        for (int p = 0; p < comm.nbrPatches; p++)
-//            System.out.println("      uptakeResource " + uptakeResource[p] + ";  resource " + resource[p]);
-//
-
         for (int p = 0; p < comm.nbrPatches; p++) {
             uptakeResource[p] = Math.min(uptakeResource[p], resource[p]);
             resource[p] += comm.inRate - resource[p] * comm.outRate - uptakeResource[p];
@@ -308,51 +302,20 @@ class Sites {
             resource[p] = Math.max(0, resource[p]);
         }
         Arrays.fill(uptakeResource, 0);
-
-//debug
-//        System.out.println("    end updateResource");
-//        for (int p = 0; p < comm.nbrPatches; p++)
-//            System.out.println("      uptakeResource " + uptakeResource[p] + ";  resource " + resource[p]);
-//
-
     }
 
     void updatePrey() {
         int deadPrey;
         int[] posPrey;
-
-//debug
-//        System.out.println("    updatePrey");
-//        for (int p = 0; p < comm.nbrPatches; p++) {
-//            System.out.println("      abundance " + Arrays.toString(abundance[p]));
-//        }
-//
-
         for (int p = 0; p < comm.nbrPatches; p++)
             for (int s = 0; s < comm.nbrSpecies; s++) {
                 deadPrey = (int) Math.min(uptakePrey[p][s], abundance[p][s]);
-
-//debug
-//                System.out.println("   patch " + p + ";  species " + s);
-//                System.out.println("    species " + s);
-//                System.out.println("      uptakePrey " + uptakePrey[p][s] + ";  abundance " + abundance[p][s]);
-//                System.out.println("      nbrPrey " + nbrPrey[p][s] + ";  deadPrey " + deadPrey);
-//
-
                 posPrey = Auxils.arraySample(deadPrey, Arrays.copyOf(preyPos[p][s], nbrPrey[p][s]));
                 for (int i = 0; i < deadPrey; i++)
                     deadBody(posPrey[i]);
                 uptakePrey[p][s] = 0;
                 abundance[p][s] = Math.max(0, abundance[p][s]);
         }
-
-//debug
-//        System.out.println("    end updatePrey");
-//        for (int p = 0; p < comm.nbrPatches; p++) {
-//            System.out.println("      abundance " + Arrays.toString(abundance[p]));
-//        }
-//
-
     }
 
     void contributionAdults() {
@@ -365,15 +328,6 @@ class Sites {
             for (s = 0; s < comm.nbrSpecies; s++)
                 Arrays.fill(fathersCumProb[p][s], 0);
         }
-
-// debug
-//        System.out.println("    contributionAdults");
-//        for (p = 0; p < comm.nbrPatches; p++) {
-//            System.out.println("      abundance " + Arrays.toString(abundance[p]));
-//            System.out.println("      nbrPrey " + Arrays.toString(nbrPrey[p]));
-//        }
-//
-
         for (int i = 0; i < totSites; i++) {
             p = patch[i];
             s = species[i];
@@ -409,37 +363,15 @@ class Sites {
                 for (s = 0; s < comm.nbrSpecies; s++)
                     Auxils.arrayDiv(fathersCumProb[p][s], fathersCumProb[p][s][comm.microsites-1]);
         }
-
-// debug
-//        System.out.println("    end contributionAdults");
-//        for (p = 0; p < comm.nbrPatches; p++) {
-//            System.out.println("      abundance " + Arrays.toString(abundance[p]));
-//            System.out.println("      nbrPrey " + Arrays.toString(nbrPrey[p]));
-//        }
-//
-
     }
 
     void reproduction() {
         int s, o, m, f, newborns, nbrSettled, patchMother;
         int[] posOffspring;
-
-//debug
-//        System.out.println("    reproduction");
-//        for (int p = 0; p < comm.nbrPatches; p++) {
-//            System.out.println("      abundance " + Arrays.toString(abundance[p]));
-//        }
-//
-
         for (int p = 0; p < comm.nbrPatches; p++) {
             newborns = (nbrNewborns[p] < 1) ? ((Auxils.random.nextDouble() <= nbrNewborns[p]) ? 1 : 0) : (int) nbrNewborns[p];
             nbrSettled = Math.min(newborns, nbrEmpty[p]);
             posOffspring = Auxils.arraySample(nbrSettled, Arrays.copyOf(emptyPos[p], nbrEmpty[p]));
-
-//debug
-//            System.out.println("      nbrNewborns " + nbrNewborns[p] + ";  newborns " + newborns + ";  nbrSettled " + nbrSettled);
-//
-
             //sampling parents with replacement!
             //selfing allowed!
             for (int i = 0; i < nbrSettled; i++) {
@@ -456,14 +388,6 @@ class Sites {
                 newBody(o, s, bodyMass[m]);
             }
         }
-
-//debug
-//        System.out.println("    end reproduction");
-//        for (int p = 0; p < comm.nbrPatches; p++) {
-//            System.out.println("      abundance " + Arrays.toString(abundance[p]));
-//        }
-//
-
     }
 
     /* inheritance for asexual reproduction (one parent) */
