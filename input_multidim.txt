@@ -10,7 +10,8 @@ ENVDIMS		        1											number of niche dimensions (default = 1)
 TRAITS		        1											number of traits (default = 2)
 MINENV              -1                                      	minimum environmental value (between 0 and 1) (default = 0.2)
 MAXENV              1                                      	maximum environmental value (between 0 and 1) (default = 0.8)
-MICROSITES          10000    										number of microsites in each patch (default = 600)
+MICROSITES          20000    										number of microsites in each patch (default = 600)
+INRATE              400
 NBRSPECIES          3
 D                   0.1                                      	mortality rate (default = 0.1)
 REPTYPE             SEXUAL											initial probability of sexual reproduction (default = 0)
