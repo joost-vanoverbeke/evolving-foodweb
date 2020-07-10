@@ -172,10 +172,10 @@ class Sites {
         environment = new double[comm.nbrPatches][comm.envDims];
         resource = new double[comm.nbrPatches];
         uptakeResource = new double[comm.nbrPatches];
-        preyAbundance = new int[comm.nbrPatches][comm.massClasses];
-        uptakePrey = new double[comm.nbrPatches][comm.massClasses];
-        nbrPrey = new int[comm.nbrPatches][comm.massClasses];
-        preyPos = new int[comm.nbrPatches][comm.massClasses][comm.microsites];
+        preyAbundance = new int[comm.nbrPatches][comm.trophicLevels];
+        uptakePrey = new double[comm.nbrPatches][comm.trophicLevels];
+        nbrPrey = new int[comm.nbrPatches][comm.trophicLevels];
+        preyPos = new int[comm.nbrPatches][comm.trophicLevels][comm.microsites];
 
         nbrEmpty = new int[comm.nbrPatches];
         emptyPos = new int[comm.nbrPatches][comm.microsites];
@@ -204,7 +204,7 @@ class Sites {
                         genotype[m][l] = (byte) Math.round(Auxils.random.nextDouble() * 0.5 * (Auxils.random.nextBoolean() ? -1 : 1) + indGtp);
                     }
                 }
-                int s = Auxils.randIntCumProb(init.speciesCumProb);
+                int s = Auxils.randIntCumProb(init.speciesCumProb[p]);
                 newBody(m, s, init.bodyMass[s]);
             }
         }
@@ -313,7 +313,7 @@ class Sites {
         int deadPrey;
         int[] posPrey;
         for (int p = 0; p < comm.nbrPatches; p++)
-            for (int c = 0; c < comm.massClasses; c++) {
+            for (int c = 0; c < comm.trophicLevels; c++) {
                 deadPrey = (int) Math.min(uptakePrey[p][c], preyAbundance[p][c]);
                 posPrey = Auxils.arraySample(deadPrey, Arrays.copyOf(preyPos[p][c], nbrPrey[p][c]));
                 for (int i = 0; i < deadPrey; i++)
@@ -716,7 +716,7 @@ class Comm {
     double iPow = 0.75;
     double assimilationEff = 0.7;
 
-    int massClasses = 3;
+    int trophicLevels = 1;
     int nbrSpecies = 1;
     double d = 0.1;
     double dPow = -0.25;
@@ -847,8 +847,7 @@ class Init {
     double resource;
     double[] bodyMass;
     double[][] environment;
-//    int[] species;
-    double[] speciesCumProb;
+    double[][] speciesCumProb;
     int[] N;
     double[][] genotype;
 
@@ -856,8 +855,7 @@ class Init {
         double dEnv;
         resource = (comm.inRate/comm.outRate)/2;
         environment = new double[comm.nbrPatches][comm.envDims];
-//        species = new int[comm.nbrPatches];
-        speciesCumProb = new double[comm.nbrSpecies];
+        speciesCumProb = new double[comm.nbrPatches][comm.nbrSpecies];
         N = new int[comm.nbrPatches];
         genotype = new double[comm.nbrPatches][comm.traits];
 
@@ -865,7 +863,7 @@ class Init {
 
 //        Arrays.fill(N, comm.microsites);
         Arrays.fill(N, comm.microsites/2);
-        Arrays.fill(speciesCumProb, 0);
+//        Arrays.fill(speciesCumProb, 0);
 
         if (comm.envType.equals("GLOBAL")) {
             for (int d = 0; d < comm.envDims; d++) {
@@ -882,14 +880,17 @@ class Init {
         }
 
         for (int s = 0; s < comm.nbrSpecies; s++) {
-            bodyMass[s] = Math.pow(10, s);
-            speciesCumProb[s] = 1.0/bodyMass[s];
+            bodyMass[s] = Math.pow(10, s%comm.trophicLevels);
         }
-        Auxils.arrayCumSum(speciesCumProb);
-        Auxils.arrayDiv(speciesCumProb, speciesCumProb[comm.nbrSpecies-1]);
 
         for (int p = 0; p < comm.nbrPatches; p++) {
 //            species[p] = p%comm.nbrSpecies;
+            for (int s = 0; s < comm.nbrSpecies; s++) {
+                int pProb = s/(comm.nbrSpecies/comm.nbrPatches) == p ? 1 : 0;
+                speciesCumProb[p][s] = pProb/bodyMass[s];
+            }
+            Auxils.arrayCumSum(speciesCumProb[p]);
+            Auxils.arrayDiv(speciesCumProb[p], speciesCumProb[p][comm.nbrSpecies-1]);
             for (int tr = 0; tr < comm.traits; tr++) {
                 genotype[p][tr] = environment[p][comm.traitDim[tr]];
             }
@@ -931,6 +932,9 @@ class Reader {
                         break;
                     case "NBRSPECIES":
                         comm.nbrSpecies = Integer.parseInt(words[1]);
+                        break;
+                    case "TROPHICLEVELS":
+                        comm.trophicLevels = Integer.parseInt(words[1]);
                         break;
                     case "D":
                         comm.d = Double.parseDouble(words[1]);
