@@ -76,7 +76,7 @@ public class EvolvingFoodweb {
     }
 
     static void logTitles(PrintWriter out) {
-        out.print("gridsize;patches;p_e_change;e_step;m;rho;dims;sigma_e;microsites;traits;traitLoci;sigma_z;mu;omega_e;d;"
+        out.print("gridX;gridY;patches;p_e_change;e_step;m;rho;dims;sigma_e;microsites;traits;traitLoci;sigma_z;mu;omega_e;d;"
                 + "run;time;patch;resource;species;bodymass;N;total_mass;fitness_mean;fitness_var;fitness_geom;load_mean;load_var;S_mean;S_var");
         for (int tr = 0; tr < comm.traits; tr++)
             out.format(";dim_tr%d;e_dim_tr%d;genotype_mean_tr%d;genotype_var_tr%d;phenotype_mean_tr%d;phenotype_var_tr%d;fitness_mean_tr%d;fitness_var_tr%d;"
@@ -88,8 +88,8 @@ public class EvolvingFoodweb {
     static void logResults(double t, PrintWriter out, int r, int es, int dr) {
         for (int p = 0; p < comm.nbrPatches; p++)
             for (int s = 0; s < comm.nbrSpecies; s++) {
-                out.format("%d;%d;%f;%f;%f;%f;%d;%f;%d;%d;%d;%f;%f;%f;%f",
-                        comm.gridSize, comm.nbrPatches, comm.pChange, comm.envStep[es], comm.dispRate[dr], comm.rho, comm.envDims, comm.sigmaE, comm.microsites, comm.traits, evol.traitLoci, evol.sigmaZ, evol.mutationRate, evol.omegaE, comm.d);
+                out.format("%d;%d;%d;%f;%f;%f;%f;%d;%f;%d;%d;%d;%f;%f;%f;%f",
+                        comm.gridX, comm.gridY, comm.nbrPatches, comm.pChange, comm.envStep[es], comm.dispRate[dr], comm.rho, comm.envDims, comm.sigmaE, comm.microsites, comm.traits, evol.traitLoci, evol.sigmaZ, evol.mutationRate, evol.omegaE, comm.d);
                 out.format(";%d;%f;%d",
                         r + 1, t, p + 1);
                 out.format(";%f;%d;%f;%d;%f;%f;%f;%f;%f;%f;%f;%f",
@@ -721,8 +721,13 @@ class Comm {
     double d = 0.1;
     double dPow = -0.25;
 
-    int gridSize = 2;
-    int nbrPatches = gridSize * gridSize;
+//    int gridSize = 2;
+    int gridX = 2;
+    String torusX = "NO";
+    int gridY = 2;
+    String torusY = "YES";
+//    int nbrPatches = gridSize * gridSize;
+    int nbrPatches = gridX * gridY;
     double pChange = 0.1;
     double[] envStep = {0.01};
     double[] dispRate = {0.01};
@@ -743,7 +748,8 @@ class Comm {
         uptakePars[0] *= run.dt;
         uptakePars[1] /= run.dt;
 
-        nbrPatches = gridSize * gridSize;
+//        nbrPatches = gridSize * gridSize;
+        nbrPatches = gridX * gridY;
         neighbours = new double[nbrPatches][nbrPatches];
         dispNeighbours = new double[nbrPatches][nbrPatches];
         calcDistNeighbours();
@@ -758,13 +764,25 @@ class Comm {
     }
 
     void calcDistNeighbours() {
-        for (int i = 0; i < gridSize; i++)
-            for (int j = 0; j < gridSize; j++)
-                for (int i2 = 0; i2 < gridSize; i2++)
-                    for (int j2 = 0; j2 < gridSize; j2++) {
-                        double dist = Math.sqrt(Math.pow(Math.min(Math.abs(i - i2), gridSize - Math.abs(i - i2)), 2) + Math.pow(Math.min(Math.abs(j - j2), gridSize - Math.abs(j - j2)), 2));
-                        neighbours[j * gridSize + i][j2 * gridSize + i2] = dist;
+        double distX, distY;
+        for (int x = 0; x < gridX; x++)
+            for (int y = 0; y < gridY; y++)
+                for (int x2 = 0; x2 < gridX; x2++)
+                    for (int y2 = 0; y2 < gridY; y2++) {
+                        distX = Math.abs(x - x2);
+                        distX = torusX.equals("YES") ? Math.min(distX, gridX - distX) : distX;
+                        distX = Math.pow(distX, 2);
+                        distY = Math.abs(y - y2);
+                        distY = torusY.equals("YES") ? Math.min(distY, gridY - distY) : distY;
+                        distY = Math.pow(distY, 2);
+                        neighbours[y * gridX + x][y2 * gridX + x2] = Math.sqrt(distX + distY);
                     }
+//debug
+        System.out.println("    distNeighbours");
+        for (int p = 0; p < nbrPatches; p++)
+            System.out.println("      patch " + p + ":  " + Arrays.toString(neighbours[p]));
+//
+
     }
 
     void calcDispNeighbours(int dr) {
@@ -775,6 +793,13 @@ class Comm {
             for (int j = 0; j < nbrPatches; j++)
                 dispNeighbours[i][j] = (i == j) ? (1 - dispRate[dr]) : (dispRate[dr] * dispNeighbours[i][j] / iSum);
         }
+
+//debug
+        System.out.println("    dispNeighbours");
+        for (int p = 0; p < nbrPatches; p++)
+            System.out.println("      patch " + p + ":  " + Arrays.toString(dispNeighbours[p]));
+//
+
     }
 }
 
@@ -942,8 +967,14 @@ class Reader {
                     case "REPTYPE":
                         comm.repType = words[1];
                         break;
-                    case "GRIDSIZE":
-                        comm.gridSize = Integer.parseInt(words[1]);
+//                    case "GRIDSIZE":
+//                        comm.gridSize = Integer.parseInt(words[1]);
+//                        break;
+                    case "GRIDX":
+                        comm.gridX = Integer.parseInt(words[1]);
+                        break;
+                    case "GRIDY":
+                        comm.gridY = Integer.parseInt(words[1]);
                         break;
                     case "ENVTYPE":
                         comm.envType = words[1];

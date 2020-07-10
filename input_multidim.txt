@@ -12,11 +12,14 @@ MINENV              -0.05                                      	minimum environm
 MAXENV              0.05                                      	maximum environmental value (between 0 and 1) (default = 0.8)
 MICROSITES          10000    										number of microsites in each patch (default = 600)
 INRATE              200
-NBRSPECIES          12
+NBRSPECIES          15
 TROPHICLEVELS       3
 D                   0.1                                      	mortality rate (default = 0.1)
 REPTYPE             ASEXUAL											initial probability of sexual reproduction (default = 0)
-GRIDSIZE            2                                        	number of patches = gridsize^2 (default = 2)
+GRIDX               5
+TORUSX              NO
+GRIDY               1
+TORUSY              YES
 ENVTYPE				LOCAL
 PCHANGE		        0.1											probability of environmental change along each niche dimension (default = 0.1)
 ENVSTEP		    1   0.0										    step size of environmental change (default = 0.01)
@@ -32,8 +35,8 @@ SIGMAZ              0.01                                     	phenotypic standar
 
 run parameters
 RUNS                1                                        	number of replicate runs (default = 1)
-TIMESTEPS           1000                                    	number of time steps in a run (default = 10000)
-PRINTSTEPS          10		                               	time steps between console output (default = 100)
-SAVESTEPS           10                                   	time steps between generation of output (default = 1000)
+TIMESTEPS           1                                    	number of time steps in a run (default = 10000)
+PRINTSTEPS          1		                               	time steps between console output (default = 100)
+SAVESTEPS           1                                   	time steps between generation of output (default = 1000)
 OUTPUT              results_test.csv			  destination of output file (default = output_evolvingMetacommunity.csv)
 
