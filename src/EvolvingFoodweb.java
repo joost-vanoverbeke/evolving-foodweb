@@ -54,7 +54,7 @@ public class EvolvingFoodweb {
                             logResults(0, streamOut, r, es, dr);
 
                             for (int t = 0; t < run.timeSteps/run.dt; t++) {
-                                sites.changeEnvironment();
+//                                sites.changeEnvironment();
                                 sites.contributionAdults();
                                 sites.reproduction();
                                 sites.updateResource();
@@ -244,25 +244,25 @@ class Sites {
         preyAbundance[patch[i]][massClass[i]]--;
     }
 
-    void changeEnvironment() {
-        boolean globalEnv = comm.envType.equals("GLOBAL");
-        boolean globalChange;
-        double globalStep = 0;
-        double step;
-
-        for (int d = 0; d < comm.envDims; d++) {
-            globalChange = globalEnv && (Auxils.random.nextDouble() <= comm.pChange);
-            if (globalChange) globalStep = comm.envStep[esPos] * (Auxils.random.nextBoolean() ? -1 : 1);
-            for (int p = 0; p < comm.nbrPatches; p++) {
-                if (globalEnv ? globalChange : (Auxils.random.nextDouble() <= comm.pChange)) {
-                    step = globalEnv ? globalStep : (comm.envStep[esPos] * (Auxils.random.nextBoolean() ? -1 : 1));
-                    environment[p][d] = environment[p][d] + step;
-                    environment[p][d] = Auxils.adjustToRange(environment[p][d], comm.minEnv, comm.maxEnv);
-                    adjustFitness(p, d);
-                }
-            }
-        }
-    }
+//    void changeEnvironment() {
+//        boolean globalEnv = comm.envType.equals("GLOBAL");
+//        boolean globalChange;
+//        double globalStep = 0;
+//        double step;
+//
+//        for (int d = 0; d < comm.envDims; d++) {
+//            globalChange = globalEnv && (Auxils.random.nextDouble() <= comm.pChange);
+//            if (globalChange) globalStep = comm.envStep[esPos] * (Auxils.random.nextBoolean() ? -1 : 1);
+//            for (int p = 0; p < comm.nbrPatches; p++) {
+//                if (globalEnv ? globalChange : (Auxils.random.nextDouble() <= comm.pChange)) {
+//                    step = globalEnv ? globalStep : (comm.envStep[esPos] * (Auxils.random.nextBoolean() ? -1 : 1));
+//                    environment[p][d] = environment[p][d] + step;
+//                    environment[p][d] = Auxils.adjustToRange(environment[p][d], comm.minEnv, comm.maxEnv);
+//                    adjustFitness(p, d);
+//                }
+//            }
+//        }
+//    }
 
     void adjustFitness(int p, int d) {
         double oldFit;
@@ -686,12 +686,13 @@ class Sites {
 
 /* Ecological parameters/variables */
 class Comm {
-    String envType = "GLOBAL";
     String repType = "SEXUAL";
     int envDims = 1;
     int traits = 2;
-    double minEnv = 0.2;
-    double maxEnv = 0.8;
+//    double minEnv = 0.2;
+//    double maxEnv = 0.8;
+    double[] envRangeX = {-1, 1};
+    double[] envRangeY = {-1, 1};
     double sigmaE = 0.0;
     int microsites = 600;
 
@@ -895,17 +896,11 @@ class Init {
         Arrays.fill(N, comm.microsites/2);
 //        Arrays.fill(speciesCumProb, 0);
 
-        if (comm.envType.equals("GLOBAL")) {
+        double stepX = comm.gridX == 1 ? 0 : (comm.envRangeX[1] - comm.envRangeX[0])/(comm.gridX-1);
+        double stepY = comm.gridY == 1 ? 0 : (comm.envRangeY[1] - comm.envRangeY[0])/(comm.gridY-1);
+        for (int p = 0; p < comm.nbrPatches; p++) {
             for (int d = 0; d < comm.envDims; d++) {
-                dEnv = comm.minEnv + (Auxils.random.nextDouble() * (comm.maxEnv - comm.minEnv));
-                for (int p = 0; p < comm.nbrPatches; p++)
-                    environment[p][d] = dEnv;
-            }
-        } else {
-            for (int p = 0; p < comm.nbrPatches; p++) {
-                for (int d = 0; d < comm.envDims; d++) {
-                    environment[p][d] = comm.minEnv + (Auxils.random.nextDouble() * (comm.maxEnv - comm.minEnv));
-                }
+                environment[p][d] = comm.envRangeX[0] + stepX*comm.patchXY[p][0] + comm.envRangeY[0] + stepY*comm.patchXY[p][1];
             }
         }
 
@@ -941,11 +936,19 @@ class Reader {
                     case "TRAITS":
                         comm.traits = Integer.parseInt(words[1]);
                         break;
-                    case "MINENV":
-                        comm.minEnv = Double.parseDouble(words[1]);
+//                    case "MINENV":
+//                        comm.minEnv = Double.parseDouble(words[1]);
+//                        break;
+//                    case "MAXENV":
+//                        comm.maxEnv = Double.parseDouble(words[1]);
+//                        break;
+                    case "ENVRANGEX":
+                        for (int i = 0; i < 2; i++)
+                            comm.envRangeX[i] = Double.parseDouble(words[1 + i]);
                         break;
-                    case "MAXENV":
-                        comm.maxEnv = Double.parseDouble(words[1]);
+                    case "ENVRANGEY":
+                        for (int i = 0; i < 2; i++)
+                            comm.envRangeY[i] = Double.parseDouble(words[1 + i]);
                         break;
                     case "SIGMAE":
                         comm.sigmaE = Double.parseDouble(words[1]);
@@ -976,9 +979,6 @@ class Reader {
                         break;
                     case "GRIDY":
                         comm.gridY = Integer.parseInt(words[1]);
-                        break;
-                    case "ENVTYPE":
-                        comm.envType = words[1];
                         break;
                     case "PCHANGE":
                         comm.pChange = Double.parseDouble(words[1]);

@@ -50,4 +50,9 @@ results_test %>%
 # x_0*c(1,10,100,1000)^pow_x
 # 1/(x_0*c(1,10,100,1000)^pow_x)
 
+# n <- 40
+# e <- 0.7
+# (g <- round(runif(n) * 0.5 * ifelse(rbernoulli(n), -1, 1) + e))
+# mean(g)
+
 

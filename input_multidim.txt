@@ -8,26 +8,25 @@ non initialized parameters receive a default value
 ecological parameters
 ENVDIMS		        1											number of niche dimensions (default = 1)
 TRAITS		        1											number of traits (default = 2)
-MINENV              -1                                      	minimum environmental value (between 0 and 1) (default = 0.2)
-MAXENV              1                                      	maximum environmental value (between 0 and 1) (default = 0.8)
+ENVRANGEX           -1 1
+ENVRANGEY           0 0
 MICROSITES          10000    										number of microsites in each patch (default = 600)
 INRATE              200
 NBRSPECIES          15
 TROPHICLEVELS       3
 D                   0.1                                      	mortality rate (default = 0.1)
 REPTYPE             ASEXUAL											initial probability of sexual reproduction (default = 0)
-GRIDX               1
-GRIDY               5
-TORUSX              YES
+GRIDX               5
+GRIDY               1
+TORUSX              NO
 TORUSY              NO
-ENVTYPE				LOCAL
-PCHANGE		        0.1											probability of environmental change along each niche dimension (default = 0.1)
+PCHANGE		        0.0											probability of environmental change along each niche dimension (default = 0.1)
 ENVSTEP		    1   0.0										    step size of environmental change (default = 0.01)
-M               1   0.1		                     			    dispersal rate between patches (should be set to 0 if gridsize = 1 (one patch)) (default = 0.01)
-RHO                 1                                        	scaling factor determining the width of the dispersal kernel  (default = 1)
+M               1   0.01		                     			    dispersal rate between patches (should be set to 0 if gridsize = 1 (one patch)) (default = 0.01)
+RHO                 2                                        	scaling factor determining the width of the dispersal kernel  (default = 1)
 
 evolution parameters
-OMEGAE              0.1                                     	niche tolerance (default = 0.02)
+OMEGAE              1                                     	niche tolerance (default = 0.02)
 TRAITLOCI           20                                       	total number of diploid loci coding for traits (default = 20 => 10 for each of 2 default trait)
 MU                  1e-4                                     	mutation rate (default = 1e-4)
 SIGMAZ              0.01                                     	phenotypic standard deviation (default = 0.01)
