@@ -5,6 +5,13 @@ library(tidyverse)
 results_test <- read_delim("C:/Users/joost/IdeaProjects/evolving-foodweb/results_test.csv",
                            ";", escape_double = FALSE, trim_ws = TRUE)
 
+
+results_test %>%
+  distinct(time, patch, e_dim_tr1) %>% 
+  mutate(patch = ordered(patch)) %>%
+  ggplot(aes(time, e_dim_tr1, color = patch)) +
+  geom_line()
+
 results_test %>%
   mutate(species = ordered(species),
          patch = ordered(patch),

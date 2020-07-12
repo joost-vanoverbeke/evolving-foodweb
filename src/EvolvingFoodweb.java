@@ -54,7 +54,8 @@ public class EvolvingFoodweb {
                             logResults(0, streamOut, r, es, dr);
 
                             for (int t = 0; t < run.timeSteps/run.dt; t++) {
-//                                sites.changeEnvironment();
+                                if (((t+1)*run.dt > run.preChange) && ((t+1)*run.dt <= (run.timeSteps - run.postChange)))
+                                    sites.changeEnvironment();
                                 sites.contributionAdults();
                                 sites.reproduction();
                                 sites.updateResource();
@@ -263,6 +264,17 @@ class Sites {
 //            }
 //        }
 //    }
+
+    void changeEnvironment() {
+        for (int d = 0; d < comm.envDims; d++) {
+            if (Auxils.random.nextDouble() <= comm.pChange) {
+                for (int p = 0; p < comm.nbrPatches; p++) {
+                    environment[p][d] = environment[p][d] + comm.envStep[esPos];
+                    adjustFitness(p, d);
+                }
+            }
+        }
+    }
 
     void adjustFitness(int p, int d) {
         double oldFit;
@@ -870,6 +882,8 @@ class Run {
     double dt = 0.1;
     int runs = 1;
     int timeSteps = 10000;
+    int preChange = 1000;
+    int postChange = 1000;
     int printSteps = 100;
     int saveSteps = 1000;
     String fileName = "output_evolution_of_sex.csv";
@@ -1017,6 +1031,12 @@ class Reader {
                         break;
                     case "TIMESTEPS":
                         run.timeSteps = Integer.parseInt(words[1]);
+                        break;
+                        case "PRECHANGE":
+                        run.preChange = Integer.parseInt(words[1]);
+                        break;
+                    case "POSTCHANGE":
+                        run.postChange = Integer.parseInt(words[1]);
                         break;
                     case "PRINTSTEPS":
                         run.printSteps = Integer.parseInt(words[1]);
