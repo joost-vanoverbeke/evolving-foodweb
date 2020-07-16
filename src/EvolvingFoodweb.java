@@ -121,10 +121,7 @@ class Sites {
     int[] patch;
     int[] species;
     boolean[] alive;
-//    double[] bodyMass;
-//    int[] massClass;
     double[] mortality;
-//    double[][] uptake;
     double[] eaten;
 
     double[][] traitPhenotype;
@@ -159,10 +156,7 @@ class Sites {
         patch = new int[totSites];
         species = new int[totSites];
         alive = new boolean[totSites];
-//        bodyMass = new double[totSites];
-//        massClass = new int[totSites];
         mortality = new double[totSites];
-//        uptake = new double[totSites][3];
         eaten = new double[totSites];
 
         traitPhenotype = new double[totSites][comm.traits];
@@ -227,12 +221,7 @@ class Sites {
         fitness[i] = 1;
         int mc = comm.massClassSpecies[s];
         double bm = comm.bodyMassClass[mc];
-//        bodyMass[i] = bm;
-//        massClass[i] = (int) Math.round(Math.log10(bm));
         mortality[i] = comm.d*Math.pow(bm, comm.dPow);
-//        uptake[i][0] = comm.uptakePars[0]*Math.pow(bm, comm.iPow);
-//        uptake[i][1] = comm.uptakePars[1]*Math.pow(bm, -comm.iPow);
-//        uptake[i][2] = comm.uptakePars[2];
         eaten[i] = 0;
         massAbundance[patch[i]][mc]++;
         for (int tr = 0; tr < comm.traits; tr++) {
@@ -731,7 +720,6 @@ class Comm {
     int trophicLevels = 1;
     int nbrSpecies = 1;
     int[] massClassSpecies = new int[nbrSpecies];
-//    double[] bodyMass = new double[nbrSpecies];
     double d = 0.1;
     double dPow = -0.25;
 
