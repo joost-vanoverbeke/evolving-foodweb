@@ -758,7 +758,7 @@ class Comm {
 //    double R = 100;
 
 
-    double[] uptakePars = {1e-4, 0.4, 1};
+    double[] uptakePars = {1e-4, 0.4, 1.0};
     double iPow = 0.75;
     double assimilationEff = 0.7;
 
