@@ -32,10 +32,10 @@ results_test %>%
   ungroup() %>% 
   ggplot(aes(time, N, color = species)) +
   geom_line() +
-  scale_y_log10() +
+  # scale_y_log10() +
   # scale_colour_viridis_d() +
   # scale_color_brewer(palette = "PuBuGn") +
-  facet_wrap(~bodymass, ncol = 1)
+  facet_wrap(~bodymass, ncol = 1, scales = "free_y")
 
 results_test %>%
   mutate(species = ordered(species),
@@ -46,10 +46,10 @@ results_test %>%
   ungroup() %>% 
   ggplot(aes(time, biomass, color = species)) +
   geom_line() +
-  scale_y_log10() +
+  # scale_y_log10() +
   # scale_colour_viridis_d() +
   # scale_color_brewer(palette = "PuBuGn") +
-  facet_wrap(~bodymass, ncol = 1)
+  facet_wrap(~bodymass, ncol = 1, scales = "free_y")
 
 
 # x_0 <- 0.1

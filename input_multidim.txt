@@ -10,8 +10,8 @@ ENVDIMS		        1											number of niche dimensions (default = 1)
 TRAITS		        1											number of traits (default = 2)
 ENVRANGEX           -1 1
 ENVRANGEY           0 0
-MICROSITES          10000    										number of microsites in each patch (default = 600)
-INRATE              200
+MICROSITES          15000    										number of microsites in each patch (default = 600)
+INRATE              150
 NBRSPECIES          15
 TROPHICLEVELS       3
 D                   0.1                                      	mortality rate (default = 0.1)
@@ -21,7 +21,7 @@ GRIDY               1
 TORUSX              NO
 TORUSY              NO
 PCHANGE		        0.1											probability of environmental change along each niche dimension (default = 0.1)
-ENVSTEP		    1   0.001										    step size of environmental change (default = 0.01)
+ENVSTEP		    1   0.00										    step size of environmental change (default = 0.01)
 M               1   0.01		                     			    dispersal rate between patches (should be set to 0 if gridsize = 1 (one patch)) (default = 0.01)
 RHO                 2                                        	scaling factor determining the width of the dispersal kernel  (default = 1)
 
