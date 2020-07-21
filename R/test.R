@@ -7,9 +7,9 @@ results_test <- read_delim("C:/Users/joost/IdeaProjects/evolving-foodweb/results
 
 
 results_test %>%
-  distinct(time, patch, e_dim_tr1) %>% 
+  distinct(time, patch, environment) %>% 
   mutate(patch = ordered(patch)) %>%
-  ggplot(aes(time, e_dim_tr1, color = patch)) +
+  ggplot(aes(time, environment, color = patch)) +
   geom_line()
 
 results_test %>%

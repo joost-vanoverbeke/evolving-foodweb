@@ -6,8 +6,6 @@ lines not starting with an input tag (e.g. starting with '//') are ignored
 non initialized parameters receive a default value
 
 ecological parameters
-ENVDIMS		        1											number of niche dimensions (default = 1)
-TRAITS		        1											number of traits (default = 2)
 ENVRANGEX           -1 1
 ENVRANGEY           0 0
 MICROSITES          15000    										number of microsites in each patch (default = 600)
@@ -20,7 +18,7 @@ GRIDX               5
 GRIDY               1
 TORUSX              NO
 TORUSY              NO
-ENVSTEP		    1   0.001										    step size of environmental change (default = 0.01)
+ENVSTEP		    1   0.0001										    step size of environmental change (default = 0.01)
 M               1   0.01		                     			    dispersal rate between patches (should be set to 0 if gridsize = 1 (one patch)) (default = 0.01)
 RHO                 2                                        	scaling factor determining the width of the dispersal kernel  (default = 1)
 
