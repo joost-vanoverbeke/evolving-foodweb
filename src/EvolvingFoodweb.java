@@ -233,7 +233,8 @@ class Sites {
 
     void adjustFitness(int p) {
         for (int m = (p * comm.microsites); m < ((p + 1) * comm.microsites); m++) {
-            fitness[m] = calcFitness(phenotype[m], environment[p]);
+            if (alive[m])
+                fitness[m] = calcFitness(phenotype[m], environment[p]);
         }
     }
 
