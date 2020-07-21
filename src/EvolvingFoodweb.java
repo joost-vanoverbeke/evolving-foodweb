@@ -77,7 +77,7 @@ public class EvolvingFoodweb {
     }
 
     static void logTitles(PrintWriter out) {
-        out.print("gridX;gridY;patches;p_e_change;e_step;m;rho;dims;sigma_e;microsites;traits;traitLoci;sigma_z;mu;omega_e;d;"
+        out.print("gridX;gridY;patches;e_step;m;rho;dims;sigma_e;microsites;traits;traitLoci;sigma_z;mu;omega_e;d;"
                 + "run;time;patch;X;Y;resource;species;bodymass;N;biomass;fitness_mean;fitness_var;fitness_geom;load_mean;load_var;S_mean;S_var");
         for (int tr = 0; tr < comm.traits; tr++)
             out.format(";dim_tr%d;e_dim_tr%d;genotype_mean_tr%d;genotype_var_tr%d;phenotype_mean_tr%d;phenotype_var_tr%d;fitness_mean_tr%d;fitness_var_tr%d;"
@@ -89,8 +89,8 @@ public class EvolvingFoodweb {
     static void logResults(double t, PrintWriter out, int r, int es, int dr) {
         for (int p = 0; p < comm.nbrPatches; p++)
             for (int s = 0; s < comm.nbrSpecies; s++) {
-                out.format("%d;%d;%d;%f;%f;%f;%f;%d;%f;%d;%d;%d;%f;%f;%f;%f",
-                        comm.gridX, comm.gridY, comm.nbrPatches, comm.pChange, comm.envStep[es], comm.dispRate[dr], comm.rho, comm.envDims, comm.sigmaE, comm.microsites, comm.traits, evol.traitLoci, evol.sigmaZ, evol.mutationRate, evol.omegaE, comm.d);
+                out.format("%d;%d;%d;%f;%f;%f;%d;%f;%d;%d;%d;%f;%f;%f;%f",
+                        comm.gridX, comm.gridY, comm.nbrPatches, comm.envStep[es], comm.dispRate[dr], comm.rho, comm.envDims, comm.sigmaE, comm.microsites, comm.traits, evol.traitLoci, evol.sigmaZ, evol.mutationRate, evol.omegaE, comm.d);
                 out.format(";%d;%f;%d;%d;%d",
                         r + 1, t, p + 1, comm.patchXY[p][0], comm.patchXY[p][1]);
                 out.format(";%f;%d;%f;%d;%f;%f;%f;%f;%f;%f;%f;%f",
@@ -255,11 +255,9 @@ class Sites {
 
     void changeEnvironment() {
         for (int d = 0; d < comm.envDims; d++) {
-            if (Auxils.random.nextDouble() <= comm.pChange) {
-                for (int p = 0; p < comm.nbrPatches; p++) {
-                    environment[p][d] = environment[p][d] + comm.envStep[esPos];
-                    adjustFitness(p, d);
-                }
+            for (int p = 0; p < comm.nbrPatches; p++) {
+                environment[p][d] = environment[p][d] + comm.envStep[esPos];
+                adjustFitness(p, d);
             }
         }
     }
@@ -730,7 +728,6 @@ class Comm {
 //    int nbrPatches = gridSize * gridSize;
     int nbrPatches = gridX * gridY;
     int[][] patchXY = new int[nbrPatches][2];
-    double pChange = 0.1;
     double[] envStep = {0.01};
     double[] dispRate = {0.01};
     double rho = 1;
@@ -746,7 +743,7 @@ class Comm {
         outRate *= run.dt;
 //        R *= run.dt;
         d *= run.dt;
-        pChange *= run.dt;
+        Auxils.arrayMult(envStep, run.dt);
         uptakePars[0] *= run.dt;
         uptakePars[1] /= run.dt;
 
@@ -998,9 +995,6 @@ class Reader {
                         break;
                     case "GRIDY":
                         comm.gridY = Integer.parseInt(words[1]);
-                        break;
-                    case "PCHANGE":
-                        comm.pChange = Double.parseDouble(words[1]);
                         break;
                     case "ENVSTEP":
                         size = Integer.parseInt(words[1]);

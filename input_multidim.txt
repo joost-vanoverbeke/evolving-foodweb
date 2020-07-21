@@ -20,8 +20,7 @@ GRIDX               5
 GRIDY               1
 TORUSX              NO
 TORUSY              NO
-PCHANGE		        0.1											probability of environmental change along each niche dimension (default = 0.1)
-ENVSTEP		    1   0.00										    step size of environmental change (default = 0.01)
+ENVSTEP		    1   0.001										    step size of environmental change (default = 0.01)
 M               1   0.01		                     			    dispersal rate between patches (should be set to 0 if gridsize = 1 (one patch)) (default = 0.01)
 RHO                 2                                        	scaling factor determining the width of the dispersal kernel  (default = 1)
 
