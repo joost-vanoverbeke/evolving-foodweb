@@ -227,14 +227,13 @@ class Sites {
         double bm = comm.bodyMassClass[mc];
         mortality[i] = comm.d*Math.pow(bm, comm.dPow);
 //        eaten[i] = 0;
-        massAbundance[patch[i]][mc]++;
+        massAbundance[p][mc]++;
         for (int tr = 0; tr < comm.traits; tr++) {
             traitPhenotype[i][tr] = calcPhenotype(i, tr);
             traitFitness[i][tr] = calcFitness(traitPhenotype[i][tr], environment[p][comm.traitDim[tr]]);
             fitness[i] *= traitFitness[i][tr];
         }
         preyPos[p][mc][nbrPrey[p][mc]++] = i;
-
     }
 
     void deadBody(int i) {
