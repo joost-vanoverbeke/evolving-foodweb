@@ -10,30 +10,30 @@ ENVRANGEX           -1 1
 ENVRANGEY           0 0
 MICROSITES          20000    										number of microsites in each patch (default = 600)
 INRATE              200
-NBRSPECIES          75
+NBRSPECIES          15
 TROPHICLEVELS       3
 D                   0.1                                      	mortality rate (default = 0.1)
-REPTYPE             ASEXUAL											initial probability of sexual reproduction (default = 0)
+REPTYPE             SEXUAL											initial probability of sexual reproduction (default = 0)
 GRIDX               5
-GRIDY               5
+GRIDY               1
 TORUSX              NO
 TORUSY              NO
-ENVSTEP		    1   0.0001										    step size of environmental change (default = 0.01)
-M               1   0.01		                     			    dispersal rate between patches (should be set to 0 if gridsize = 1 (one patch)) (default = 0.01)
+ENVSTEP		    1   0.00										    step size of environmental change (default = 0.01)
+M               1   0.1		                     			    dispersal rate between patches (should be set to 0 if gridsize = 1 (one patch)) (default = 0.01)
 RHO                 2                                        	scaling factor determining the width of the dispersal kernel  (default = 1)
 
 evolution parameters
-OMEGAE              1                                     	niche tolerance (default = 0.02)
+OMEGAE              4                                     	niche tolerance (default = 0.02)
 TRAITLOCI           20                                       	total number of diploid loci coding for traits (default = 20 => 10 for each of 2 default trait)
 MU                  1e-4                                     	mutation rate (default = 1e-4)
-SIGMAZ              0.01                                     	phenotypic standard deviation (default = 0.01)
+SIGMAZ              0.1                                     	phenotypic standard deviation (default = 0.01)
 
 
 run parameters
 RUNS                1                                        	number of replicate runs (default = 1)
-TIMESTEPS           500                                    	number of time steps in a run (default = 10000)
-PRECHANGE           100
-POSTCHANGE          100
+TIMESTEPS           10000                                    	number of time steps in a run (default = 10000)
+PRECHANGE           1000
+POSTCHANGE          1000
 PRINTSTEPS          100		                               	time steps between console output (default = 100)
 SAVESTEPS           100                                   	time steps between generation of output (default = 1000)
 OUTPUT              results_test.csv			  destination of output file (default = output_evolvingMetacommunity.csv)
