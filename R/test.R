@@ -122,12 +122,20 @@ results_test %>%
 #                 g = 0,
 #                 o = 4)
 # D <-
-#   D %>% 
+#   D %>%
 #   mutate(f = exp(-((e-g)^2)/(2*o^2)))
 # 
-# D %>% 
+# D %>%
 #   ggplot(aes(e, f)) +
 #   geom_line() +
 #   geom_vline(aes(xintercept = -1)) +
-#   geom_vline(aes(xintercept = 1))
+#   geom_vline(aes(xintercept = 1)) +
+#   geom_vline(aes(xintercept = -2)) +
+#   geom_vline(aes(xintercept = 2))
+
+# bm <- c(1,10,100)
+# m <- 0.1
+# mPow <- 0.25
+# 
+# m*(bm^mPow)
 
